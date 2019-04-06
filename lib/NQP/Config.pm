@@ -378,10 +378,9 @@ sub configure_misc {
     abstract;
 }
 
-sub configure_prefix {
+sub configure_refine_vars {
     my $self   = shift;
     my $config = $self->{config};
-    $config->{prefix} ||= $self->option('prefix');
     unless ( $config->{prefix} ) {
 
         # XXX This is only Unix-friendly way.
@@ -394,6 +393,10 @@ sub configure_prefix {
         $config->{prefix} = $default;
     }
     $config->{prefix} = File::Spec->rel2abs( $config->{prefix} );
+
+    unless ( $config->{libdir} ) {
+        $config->{libdir} = File::Spec->catdir( $config->{prefix}, 'share' );
+    }
 }
 
 sub parse_backends {
@@ -840,10 +843,6 @@ sub pop_ctx {
 sub set_key {
     my $self = shift;
     my ( $key, $val, %params ) = @_;
-    my $mname = "_ckey_$key";
-    if ( $self->can($mname) ) {
-        $val = $self->$mname($val);
-    }
     $val //= $params{default};
     return $self->{config}{$key} = $val;
 }
@@ -1013,19 +1012,6 @@ sub read_config {
         last if %config;
     }
     return %config;
-}
-
-### Handlers for configuration keys.
-# A handler takes a value assigned to a key and must return same or another
-# value which is considered valid for this key. I.e. it could set to a default
-# if the assigned value is undefined, for example.
-
-sub _ckey_libdir {
-    my ( $self, $val ) = @_;
-    unless ( defined $val ) {
-        return File::Spec->catdir( $self->cfg('prefix'), 'share' );
-    }
-    $val;
 }
 
 ### Tieing-related stuff
