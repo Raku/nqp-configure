@@ -34,12 +34,14 @@ sub throw {
     die $self;
 }
 
+# Push current macro+file on stack
 sub fpush {
     my $self = shift;
     my ( $macro, $file ) = @_;
     push @{ $self->{macrostack} }, { macro => $macro, file => $file };
 }
 
+# Pop last macro+file from the stack
 sub fpop {
     my $self = shift;
     pop @{ $self->{macrostack} };
@@ -79,6 +81,9 @@ my %preexpand = map { $_ => 1 } qw<
 
 >;
 
+# Hash of externally registered macros.
+my %external;
+
 sub new {
     my $class = shift;
     my $self  = bless {}, $class;
@@ -96,6 +101,16 @@ sub init {
     }
 
     return $self;
+}
+
+sub register_macro {
+    my $self = shift;
+    my ($name, $sub) = @_;
+
+    die "Bad macro name '$name'" unless $name && $name =~ /^\w+$/;
+    die "Macro sub isn't a code ref" unless ref($sub) eq 'CODE';
+
+    $external{$name} = $sub;
 }
 
 sub cfg { $_[0]->{config_obj} }
@@ -137,9 +152,16 @@ sub execute {
     $self->throw("Macro name is missing in call to method execute()")
       unless $macro;
 
-    my $method = "_m_$macro";
+    my $method;
 
-    $self->throw("Unknown macro $macro") unless $self->can($method);
+    if ($external{$macro}) {
+        $method = $external{$macro};
+    }
+    else {
+        $method = $self->can("_m_$macro");
+    }
+
+    $self->throw("Unknown macro $macro") unless ref($method) eq 'CODE';
 
     my $s = $cfg->push_ctx(
         {
@@ -334,33 +356,6 @@ sub not_in_context {
     }
 }
 
-sub specs_iterate {
-    my $self = shift;
-    my $cb   = shift;
-
-    my $cfg = $self->{config_obj};
-
-    $self->not_in_context( specs => 'spec' );
-
-    for my $spec ( $cfg->perl6_specs ) {
-        my $spec_char   = $spec->[0];
-        my $spec_subdir = "6.$spec_char";
-        my %config      = (
-            ctx_subdir  => $spec_subdir,
-            spec_subdir => $spec_subdir,
-            spec        => $spec_char,
-            ucspec      => uc $spec_char,
-            lcspec      => lc $spec_char,
-        );
-        my $spec_ctx = {
-            spec    => $spec,
-            configs => [ \%config ],
-        };
-        my $s = $cfg->push_ctx($spec_ctx);
-        $cb->(@_);
-    }
-}
-
 sub backends_iterate {
     my $self = shift;
     my $cfg  = $self->{config_obj};
@@ -449,23 +444,6 @@ sub _m_for_backends {
     };
 
     $self->backends_iterate($cb);
-
-    return $out;
-}
-
-# for_specs(text)
-# Iterates over active backends and expands text in the context of each backend.
-sub _m_for_specs {
-    my $self = shift;
-    my $text = shift;
-
-    my $out = "";
-
-    my $cb = sub {
-        $out .= $self->_expand($text);
-    };
-
-    $self->specs_iterate($cb);
 
     return $out;
 }
