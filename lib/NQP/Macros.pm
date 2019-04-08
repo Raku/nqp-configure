@@ -390,7 +390,7 @@ sub find_filepath {
     my $cfg       = $self->{config_obj};
     my @out;
 
-    my $where = $params{where} // 'template';
+    my $where = $params{where} // 'templates';
     delete $params{where};
 
     for my $src (@filenames) {
@@ -487,14 +487,14 @@ sub _m_ctx_template {
 # with extensions .pl, .nqp, .p6.
 sub _m_script {
     my $self = shift;
-    return $self->build_file_path(shift);
+    return $self->find_filepath( shift, where => 'build', );
 }
 
 # ctx_script(file1 file2)
 # Similar to script but looks only in the current context subdir
 sub _m_ctx_script {
     my $self = shift;
-    return $self->build_file_path( shift, subdirs_only => 1, );
+    return $self->find_filepath( shift, where => 'build', subdirs_only => 1, );
 }
 
 # include_capture(command line)
