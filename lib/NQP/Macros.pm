@@ -231,8 +231,8 @@ sub _expand {
                  (
                      (?<msym> (?: @@ | @))
                      (?:
-                         (?<macro_var> [:\w]+ )
-                       | (?: (?<mfunc_noexp>!)? (?<macro_func> [:\w]+ )
+                         (?<macro_var> \w [:\w]* )
+                       | (?: (?<mfunc_noexp>!)? (?<macro_func> \w [:\w]* )
                            (?>
                              \( 
                                (?<mparam>
