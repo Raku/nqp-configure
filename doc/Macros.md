@@ -28,7 +28,7 @@ A number of variables are fetched from `NQP` and `MoarVM`. Those will have
 
 ## Macro Functions
 
-A common format for a macro is:
+A macro common format is:
 
 ```
 @[!]macro(text to process)@
@@ -183,10 +183,10 @@ Usually, the template name is assumed to be ending with `.in` extension
 (`Makefile.in`). When looking for the file, macro first checks for exact name is
 passed in the parameter. If not found then `.in` is appended and checked again.
 
-For example, within the context of
-`@for_backends()@` macro `@include(Makefile)@` would check the following variants in the order:
+For example, within the context of `@for_backends()@` macro
+`@include(Makefile)@` would check the following directories in the order:
 
-1. `@templates_dir@/moar/Makefile` (which is
+1. `@templates_dir@/moar/Makefile` (which is actually
    `@templates_dir@/@ctx_subdir@/Makefile`)
 1. `@templates_dir@/moar/Makefile.in`
 1. `@templates_dir@/Makefile`
@@ -235,8 +235,8 @@ Expand to the full path of a template file. The file is searched in
 ```
 
 would expand to
-`/_<your-homedir>_/_<path-to-sources>_/tools/templates/_<backend>_/Makefile.in`
-or to `/_<your-homedir>_/_<path-to-sources>_/tools/templates/Makefile.in`
+`/<your-homedir>/<path-to-sources>/tools/templates/<backend>/Makefile.in`
+or to `/<your-homedir>/<path-to-sources>/tools/templates/Makefile.in`
 depending on the context and where the file exists.
 
 Like any other `ctx_` macro, `ctx_include` only checks in the context subdir.
