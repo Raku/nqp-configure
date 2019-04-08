@@ -103,8 +103,209 @@ we can say that the Makefile is included in a backend context.
 
 For simplicity, macros in this section are not enclosed with `@`.
 
-### include(template)
+### expand(text)
 
 _Pre-expanded_
 
-Finds a template file, expands it and returns the result.
+Simply expands its parameter. Makes sense in combination with macros returning
+unexpanded text. See the example with `@!nfp()` above.
+
+### sp_escape(text)
+
+_Pre-expanded_
+
+Escapes spaces in the parameter with `\`. This is the macro used when parser
+encounters a `@@` macro call.
+
+### nl_escape(text)
+
+_Pre-expanded_
+
+Escapes newlines in the parameter with `\`.
+
+### unescape(text)
+
+Very simple unescaping. Replaces all `\<char>` sequences with `<char>`.
+
+### nfp(file1 file2 ...)
+
+_Pre-expanded_
+
+The macro name stands for Normalize File Path. Converts Unix-style paths with
+`/` directory separator into what is suitable for the current OS. Most typical
+example is Windows where slashes are replaced with backslashes.
+
+### uc(text), lc(text)
+
+_Pre-expanded_
+
+Convert text into all upper/lower case respectively.
+
+### for_backends(text)
+
+Iterates through all active backends (i.e. defined with `--backends` command
+line option), sets context for each of the backend, and expands the parameter
+with each context. The following variables are set for the contexts:
+
+- `ctx_subdir` – name of the contexts subdirectory. Same as backend name.
+- `backend_subdir` - same as above. Can be used when a nested macro defines own
+  context with `ctx_subdir` variable.
+- `backend` – just backend name.
+- `backend_abbr` – backend abbreviation. I.e. `m` for `moar`, `j` for `jvm`,
+  `js` for... uhm... yes, for `js`.
+- `backend_prefix` - alias for `backend_abbr`.
+
+### for_specs(text)
+
+_Defined by `NQP::Config::Rakudo` and only available for Rakudo build._
+
+Similar to `for_backends`, but iterates over language specification revisions
+(`c`, `d`, ...). Sets the following context variables:
+
+- `ctx_subdir` - spec subdirectory, `6.<spec-letter>`
+- `spec_subdir` - same as above
+- `spec` - specification revision letter
+- `ucspec` – same as above, but in upper case
+- `lcspec` – same as above, but in guaranteed lower case.
+
+### include(template1 template2)
+
+_Pre-expanded_
+
+Finds a template file, expands it and returns the result. The macro searches for
+the template file in templates directory defined by `templates_dir`
+confgiguration variable (`@base_dir@/tools/templates` normally). If current
+context defines `ctx_subdir` variable then this subdirectory within the
+templates directory is checked first. Then if no file is found the macro falls
+back to the default `@templates_dir@`. 
+
+Usually, the template name is assumed to be ending with `.in` extension
+(`Makefile.in`). When looking for the file, macro first checks for exact name is
+passed in the parameter. If not found then `.in` is appended and checked again.
+
+For example, within the context of
+`@for_backends()@` macro `@include(Makefile)@` would check the following variants in the order:
+
+1. `@templates_dir@/moar/Makefile` (which is
+   `@templates_dir@/@ctx_subdir@/Makefile`)
+1. `@templates_dir@/moar/Makefile.in`
+1. `@templates_dir@/Makefile`
+1. `@templates_dir@/Makefile.in`
+
+Circular dependency is a fatal condition.
+
+The resulting text is wrapped into comments informing about where this text was
+included from at the start and declaring the end of the inclusion with the file
+name at the end.
+
+### insert(template1 template2)
+
+_Pre-expanded_
+
+Same as `include` above but doesn't wrap the result into comments.
+
+### ctx_include(template1 template2), ctx_insert(template1 template2)
+
+Same as respective macros without the `ctx_` prefix but doesn't use the default
+templates directory and only searching in the `@templates_dir@/@ctx_subdir@`.
+Useful when templates with the same name are contained in both default and
+context directories. For example, we're expanding `Makefile.in`. The the
+following line:
+
+```
+@for_backends(@include(Makefile)@)
+```
+
+May result in circular dependency if a backend doesn't have its own `Makefile`
+template in the context subdirectory. So, the right thing to do would be:
+
+```
+@for_backends(@ctx_include(Makefile)@)
+```
+
+### template(templatename), ctx_template(templatename)
+
+_Pre-expanded_
+
+Expand to the full path of a template file. The file is searched in
+`@templates_dir@` similarly to `include` macro. For example, macro:
+
+```
+@template(Makefile)@
+```
+
+would expand to
+`/_<your-homedir>_/_<path-to-sources>_/tools/templates/_<backend>_/Makefile.in`
+or to `/_<your-homedir>_/_<path-to-sources>_/tools/templates/Makefile.in`
+depending on the context and where the file exists.
+
+Like any other `ctx_` macro, `ctx_include` only checks in the context subdir.
+
+### script(scriptname), ctx_script(scriptname)
+
+_Pre-expanded_
+
+Similar to `template` macros, but look in `@build_dir@`. Also, instead of `.in`
+suffix this macro tries appending one of `.pl`, `.nqp`, `.p6` – in this order.
+
+### include_capture(command)
+
+_Pre-expanded_
+
+Executes the command and inserts its output. For example:
+
+```
+@include_capture(ls @templates_dir@)
+```
+
+would insert list of files in the default templates directory. To execute
+a build script the following form is recommended:
+
+```
+@include_capture(@script(gen-js-makefile)@)@
+```
+
+The output would include both stdout and stderr of the executed subprocess in
+will be wrapped into begin/end comments.
+
+### insert_capture(command)
+
+_Pre-expanded_
+
+Similar to `include`, but doesn't wrap the output into begin/end comments.
+
+### insert_filelist(template)
+
+Inserts a list of files from a file found in `@templates_dir@` (context subdir
+is respected). The list is considered to be whitespace-sperated (including
+newlines). Each file name in the list will be normalized (i.e. passed through
+`nfp`) and the resulting list will be formatted for use in a Makefile:
+
+* one file
+* per line, newlines escaped with `\`
+* all lines, except the first one, indented with four spaces (unless
+  configuration variable `filelist_indent` specifies another amount)
+ 
+
+## Configuration variables
+
+The following variables are set by the `NQP::Config` as defaults:
+
+- `perl` Perl 5 executable.
+- `slash` Directory separator, used by the current OS
+- `shell` Default shell
+- `base_dir` Where `Configure.pl` is located. In other words, the directory
+  where we do the build.
+- `build_dir` Where scripts and their helper files are located. Normally it
+  would be `tools/build` (where otherwise is not specified, we give paths
+  related to the `base_dir`)
+- `templates_dir` Where template files are located. Normally it is
+  `tools/templates`
+- `filelist_indent` Number of spaces to indent filelists. 4 by default.
+- `lang` The language we build. `NQP` or `Rakudo`.
+- `lclang` Same as above but in all lowercase.
+- `exe`, `bat` Extensions of executable and batch files for the current OS.
+- `cpsep` Separator of pathlists for the current OS. `;` for Windows, `:`
+  otherwise.
+- `runner_suffix` Set from `bat` variable for now.
+
