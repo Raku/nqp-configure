@@ -105,12 +105,13 @@ sub init {
 
 sub register_macro {
     my $self = shift;
-    my ($name, $sub) = @_;
+    my ($name, $sub, %params) = @_;
 
     die "Bad macro name '$name'" unless $name && $name =~ /^\w+$/;
     die "Macro sub isn't a code ref" unless ref($sub) eq 'CODE';
 
     $external{$name} = $sub;
+    $preexpand{$name} = !!$params{preexpand};
 }
 
 sub cfg { $_[0]->{config_obj} }
@@ -486,14 +487,14 @@ sub _m_ctx_template {
 # with extensions .pl, .nqp, .p6.
 sub _m_script {
     my $self = shift;
-    return $self->find_filepath( shift, where => 'build', );
+    return $self->build_file_path(shift);
 }
 
 # ctx_script(file1 file2)
 # Similar to script but looks only in the current context subdir
 sub _m_ctx_script {
     my $self = shift;
-    return $self->find_filepath( shift, where => 'build', subdirs_only => 1, );
+    return $self->build_file_path( shift, subdirs_only => 1, );
 }
 
 # include_capture(command line)
@@ -557,9 +558,8 @@ sub _m_sp_escape {
     $str;
 }
 
-# sp_escape(a string)
+# nl_escape(a string)
 # Escapes all newlines in a string with \.
-# Implicitly called by @@ macros
 sub _m_nl_escape {
     my $self = shift;
     my $str  = shift;
