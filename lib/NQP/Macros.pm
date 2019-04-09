@@ -6,17 +6,17 @@ use warnings;
 package NQP::Macros::_Err;
 use Scalar::Util qw<blessed>;
 use Carp qw<longmess>;
+use Data::Dumper;
 
 our @CARP_NOT = qw<NQP::Macros::_Err>;
 
 sub new {
     my $class = shift;
-    my ( $msg, %params ) = shift;
-    $params{callstack} //= longmess("");
-    my $self = bless {
-        err        => $msg,
-        callstack  => $params{callstack},
-        macrostack => [],
+    my $msg   = shift;
+    my $self  = bless {
+        err       => $msg,
+        callstack => longmess(""),
+        @_,
     }, $class;
     return $self;
 }
@@ -34,19 +34,6 @@ sub throw {
     die $self;
 }
 
-# Push current macro+file on stack
-sub fpush {
-    my $self = shift;
-    my ( $macro, $file ) = @_;
-    push @{ $self->{macrostack} }, { macro => $macro, file => $file };
-}
-
-# Pop last macro+file from the stack
-sub fpop {
-    my $self = shift;
-    pop @{ $self->{macrostack} };
-}
-
 sub message {
     my $self = shift;
     my $err  = $self->{err};
@@ -57,10 +44,27 @@ sub message {
         my $spcs = "  " x $level;
         return map { $spcs . $_ } split /\n/s, shift;
     }
-    while ( my $frame = $self->fpop ) {
-        push @msg, indent("in macro $frame->{macro} at $frame->{file}");
-        $level++;
+
+    my $file = "*no file?*";
+    my @contexts =
+      reverse(
+        $self->{contexts}
+        ? @{ $self->{contexts} }
+        : ( $self->{macro_obj} ? ( $self->{macro_obj}->cfg->contexts ) : () )
+      );
+    for my $ctx (@contexts) {
+        if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
+            $file = $newfile;
+        }
+        if ( $ctx->{current_macro} ) {
+            push @msg,
+              indent(
+                "... in macro $ctx->{current_macro}($ctx->{current_param}) at $file"
+              );
+            $level++;
+        }
     }
+
     push @msg, indent( $self->{callstack} );
     return join( "\n", @msg );
 }
@@ -105,12 +109,12 @@ sub init {
 
 sub register_macro {
     my $self = shift;
-    my ($name, $sub, %params) = @_;
+    my ( $name, $sub, %params ) = @_;
 
     die "Bad macro name '$name'" unless $name && $name =~ /^\w+$/;
     die "Macro sub isn't a code ref" unless ref($sub) eq 'CODE';
 
-    $external{$name} = $sub;
+    $external{$name}  = $sub;
     $preexpand{$name} = !!$params{preexpand};
 }
 
@@ -137,8 +141,16 @@ sub fail {
 
 sub throw {
     my $self = shift;
-    my $msg  = shift;
-    NQP::Macros::_Err->throw( $msg, @_ );
+    my $err  = shift;
+    if ( ref($err) && $err->isa('NQP::Macros::_Err') ) {
+        $err->throw;
+    }
+    NQP::Macros::_Err->throw(
+        $err,
+        macro_obj => $self,
+        contexts  => [ $self->cfg->contexts ],    # copy the list
+        @_
+    );
 }
 
 sub execute {
@@ -153,17 +165,6 @@ sub execute {
     $self->throw("Macro name is missing in call to method execute()")
       unless $macro;
 
-    my $method;
-
-    if ($external{$macro}) {
-        $method = $external{$macro};
-    }
-    else {
-        $method = $self->can("_m_$macro");
-    }
-
-    $self->throw("Unknown macro $macro") unless ref($method) eq 'CODE';
-
     my $s = $cfg->push_ctx(
         {
             current_macro => $macro,
@@ -176,6 +177,17 @@ sub execute {
         }
     );
 
+    my $method;
+
+    if ( $external{$macro} ) {
+        $method = $external{$macro};
+    }
+    else {
+        $method = $self->can("_m_$macro");
+    }
+
+    $self->throw("Unknown macro $macro") unless ref($method) eq 'CODE';
+
     if ( !$params{no_preexapnd} && $preexpand{$macro} ) {
         $param = $self->_expand($param);
     }
@@ -183,13 +195,7 @@ sub execute {
     my $out;
     eval { $out = $self->$method($param); };
     if ($@) {
-        if ( ref($@) eq 'NQP::Macros::_Err' ) {
-            $@->fpush( "$macro($orig_param)", $file || "" );
-            $@->throw;
-        }
-        else {
-            $self->throw( $@, callstack => longmess("") );
-        }
+        $self->throw( $@, callstack => longmess("") );
     }
     return $out;
 }
@@ -519,7 +525,8 @@ sub _m_insert_capture {
     $self->throw("No executable '$cmd' found") unless can_run($cmd);
     my $out;
     my ( $ok, $err ) = run( command => $cmd_line, buffer => \$out );
-    $self->throw("Failed to execute '$cmd_line': $err\nCommand output:\n$out") unless $ok;
+    $self->throw("Failed to execute '$cmd_line': $err\nCommand output:\n$out")
+      unless $ok;
     return $self->_expand($out);
 }
 
