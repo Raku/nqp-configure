@@ -15,6 +15,11 @@ sub expands {
   is $got, $expected, $snippet;
 }
 
-expands '@sp_escape(foo bar)@', 'foo\\ bar';
+expands "\@sp_escape(foo bar\n)\@", "foo\\ bar\n";
+expands "\@nl_escape(foo bar\n)\@", "foo bar\\\n";
+expands "\@unescape(fo\\o b\\\\a\\r)\@", "foo b\\ar";
+
+expands "\@uc(foO BaR)\@", "FOO BAR";
+expands "\@lc(foO BaR)\@", "foo bar";
 
 done_testing;
