@@ -59,7 +59,7 @@ sub message {
         if ( $ctx->{current_macro} ) {
             push @msg,
               indent(
-                "... in macro $ctx->{current_macro}($ctx->{current_param}) at $file"
+"... in macro $ctx->{current_macro}($ctx->{current_param}) at $file"
               );
             $level++;
         }
@@ -81,7 +81,7 @@ my %preexpand = map { $_ => 1 } qw<
   include include_capture
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
-  sp_escape nl_escape fixup uc lc nfp
+  sp_escape nl_escape fixup uc lc nfp abs2rel
 
 >;
 
@@ -583,21 +583,49 @@ sub _m_unescape {
     return $str;
 }
 
-# nfp(dir/file)
-# Normalizes a Unix-style file path for the current OS. Mostly for replacing
-# / with \ for Win*
-sub _m_nfp {
-    my $self  = shift;
+# Iterate over whitespace separated list and execute callback for non-ws elems.
+sub _iterate_ws_list {
+    my $self = shift;
+    my $cb   = shift;
+    $self->throw("_iterate_filelist callback isn't a code ref")
+      unless ref($cb) eq 'CODE';
     my @elems = split /(\s+)/s, shift;
     my $out   = "";
     while (@elems) {
         my ( $file, $ws ) = ( shift @elems, shift @elems );
         if ($file) {    # If text starts with spaces $file will be empty
-            $file = NQP::Config::nfp($file);
+            $file = $cb->($file);
         }
         $out .= $file . ( $ws // "" );
     }
     return $out;
+}
+
+# nfp(dir/file)
+# Normalizes a Unix-style file path for the current OS. Mostly for replacing
+# / with \ for Win*
+sub _m_nfp {
+    my $self = shift;
+    return $self->_iterate_ws_list( sub { NQP::Config::nfp( $_[0] ); },
+        shift );
+}
+
+# abs2rel(file1 file2)
+# Converts absolute file path into relative to @base_dir@
+sub _m_abs2rel {
+    my $self     = shift;
+    my $base_dir = $self->cfg->cfg('base_dir');
+    say STDERR "Using basedir: $base_dir";
+    return $self->_iterate_ws_list(
+        sub {
+            NQP::Config::nfp(
+                File::Spec->abs2rel(
+                    File::Spec->rel2abs( $_[0], $base_dir ), $base_dir
+                )
+            );
+        },
+        shift
+    );
 }
 
 # uc(str)
