@@ -40,10 +40,10 @@ sub message {
     chomp $err;
     my @msg   = $err;
     my $level = 1;
-    my sub indent {
+    my $indent = sub {
         my $spcs = "  " x $level;
         return map { $spcs . $_ } split /\n/s, shift;
-    }
+    };
 
     my $file = "*no file?*";
     my @contexts =
@@ -58,14 +58,14 @@ sub message {
         }
         if ( $ctx->{current_macro} ) {
             push @msg,
-              indent(
+              $indent->(
 "... in macro $ctx->{current_macro}($ctx->{current_param}) at $file"
               );
             $level++;
         }
     }
 
-    push @msg, indent( $self->{callstack} );
+    push @msg, $indent->( $self->{callstack} );
     return join( "\n", @msg );
 }
 
