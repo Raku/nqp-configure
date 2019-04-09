@@ -47,14 +47,15 @@ sub init {
           unless defined $params{$rp};
     }
 
+    my $base_dir = nfp($FindBin::Bin);
+
     $self->{config} = {
-        perl      => $^X,
-        slash     => slash(),
-        shell     => $^O eq 'solaris' ? '' : "SHELL = " . $self->shell_cmd,
-        base_dir  => $FindBin::Bin,
-        build_dir => File::Spec->catdir( $FindBin::Bin, 'tools', 'build' ),
-        templates_dir =>
-          File::Spec->catdir( $FindBin::Bin, 'tools', 'templates' ),
+        perl          => $^X,
+        slash         => slash(),
+        shell         => $^O eq 'solaris' ? '' : "SHELL = " . $self->shell_cmd,
+        base_dir      => $base_dir,
+        build_dir     => File::Spec->catdir( $base_dir, 'tools', 'build' ),
+        templates_dir => File::Spec->catdir( $base_dir, 'tools', 'templates' ),
 
         # Number of spaces to indent filelists in a makefile
         filelist_indent => 4,
