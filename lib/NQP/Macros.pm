@@ -38,8 +38,8 @@ sub message {
     my $self = shift;
     my $err  = $self->{err};
     chomp $err;
-    my @msg   = $err;
-    my $level = 1;
+    my @msg    = $err;
+    my $level  = 1;
     my $indent = sub {
         my $spcs = "  " x $level;
         return map { $spcs . $_ } split /\n/s, shift;
@@ -606,8 +606,7 @@ sub _iterate_ws_list {
 # / with \ for Win*
 sub _m_nfp {
     my $self = shift;
-    return $self->_iterate_ws_list( sub { NQP::Config::nfp( $_[0] ); },
-        shift );
+    return $self->_iterate_ws_list( sub { NQP::Config::nfp( $_[0] ); }, shift );
 }
 
 # abs2rel(file1 file2)

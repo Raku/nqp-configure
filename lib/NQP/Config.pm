@@ -44,7 +44,7 @@ sub new {
 
     if ( $class eq __PACKAGE__ ) {
         die "Can't create instance of class " . $class
-        . ", use a language sub-class instead";
+          . ", use a language sub-class instead";
     }
 
     my $new_obj = bless {}, $class;
@@ -58,7 +58,7 @@ sub init {
 
     my $base_dir = nfp($FindBin::Bin);
 
-    my $lang = $params{lang} // (split /::/, ref($self))[-1];
+    my $lang = $params{lang} // ( split /::/, ref($self) )[-1];
 
     $self->{config} = {
         perl          => $^X,
@@ -672,6 +672,7 @@ sub fill_template_file {
 sub fixup_makefile {
     my $self = shift;
     my $text = shift;
+
     #if ( $self->is_win ) {
     #    $text =~ s{/}{\\}g;
     #    $text =~ s{\\\*}{\\\\*}g;
@@ -786,13 +787,13 @@ sub git_checkout {
 
 sub _restore_ctx {
     my %params = @_;
-    my $obj = $params{obj};
+    my $obj    = $params{obj};
 
     my $idx = 0;
 
     for my $ctx ( @{ $obj->{contexts} } ) {
         if ( $ctx == $params{ctx} ) {
-            splice( @{$obj->{contexts}}, $idx, 1);
+            splice( @{ $obj->{contexts} }, $idx, 1 );
             return;
         }
         ++$idx;
@@ -854,7 +855,8 @@ sub push_ctx {
 
     push @{ $self->{contexts} }, $ctx;
 
-    return NQP::Config::_Scoping->new( \&_restore_ctx, obj => $self, ctx => $ctx );
+    return NQP::Config::_Scoping->new( \&_restore_ctx, obj => $self,
+        ctx => $ctx );
 }
 
 sub pop_ctx {
@@ -913,14 +915,15 @@ sub cfg {
 # Set a configuration variable. Not that by default variable is set on the root
 # config hash.
 sub set {
-    my $self = shift;
-    my $key = shift;
-    my $val = shift;
+    my $self   = shift;
+    my $key    = shift;
+    my $val    = shift;
     my %params = @_;
 
-    unless ($params{in_ctx}) {
+    unless ( $params{in_ctx} ) {
         $self->{config}{$key} = $val;
-    } else {
+    }
+    else {
         $self->{contexts}[-1]{config}{$key} = $val;
     }
 
