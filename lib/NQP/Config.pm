@@ -661,12 +661,12 @@ sub fill_template_file {
 sub fixup_makefile {
     my $self = shift;
     my $text = shift;
-    if ( $self->is_win ) {
-        $text =~ s{/}{\\}g;
-        $text =~ s{\\\*}{\\\\*}g;
-        $text =~ s{(?:git|http):\S+}{ do {my $t = $&; $t =~ s'\\'/'g; $t} }eg;
-        $text =~ s/.*curl.*/do {my $t = $&; $t =~ s'%'%%'g; $t}/meg;
-    }
+    #if ( $self->is_win ) {
+    #    $text =~ s{/}{\\}g;
+    #    $text =~ s{\\\*}{\\\\*}g;
+    #    $text =~ s{(?:git|http):\S+}{ do {my $t = $&; $t =~ s'\\'/'g; $t} }eg;
+    #    $text =~ s/.*curl.*/do {my $t = $&; $t =~ s'%'%%'g; $t}/meg;
+    #}
     if ( $self->cfg('makefile_timing') ) {
         $text =~ s{ (?<!\\\n)        # not after line ending in '\'
                         ^                # beginning of line
@@ -775,7 +775,17 @@ sub git_checkout {
 
 sub _restore_ctx {
     my %params = @_;
-    $params{obj}->pop_ctx;
+    my $obj = $params{obj};
+
+    my $idx = 0;
+
+    for my $ctx ( @{ $obj->{contexts} } ) {
+        if ( $ctx == $params{ctx} ) {
+            splice( @{$obj->{contexts}}, $idx, 1);
+            return;
+        }
+        ++$idx;
+    }
 }
 
 sub contexts {
@@ -833,7 +843,7 @@ sub push_ctx {
 
     push @{ $self->{contexts} }, $ctx;
 
-    return NQP::Config::_Scoping->new( \&_restore_ctx, obj => $self );
+    return NQP::Config::_Scoping->new( \&_restore_ctx, obj => $self, ctx => $ctx );
 }
 
 sub pop_ctx {
