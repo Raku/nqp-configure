@@ -687,14 +687,14 @@ sub fill_template_text {
     my %params = @_;
     my $config = $self->config;
 
-    my sub on_fail {
+    my $on_fail = sub {
         my $msg = shift;
         my $src = $params{source} ? " in template $params{source}" : "";
         $self->sorry("$msg$src");
-    }
+    };
 
     my $text_out =
-      NQP::Macros->new( config => $self, on_fail => \&on_fail )->expand($text);
+      NQP::Macros->new( config => $self, on_fail => $on_fail )->expand($text);
 
     # XXX This is better be handled with makefile macros. Then the whole method
     # would be easily replaced with Macros->expand()
