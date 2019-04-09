@@ -38,16 +38,27 @@ our @EXPORT_OK = qw<
   nfp slash slurp system_or_die cmp_rev read_config
 >;
 
+sub new {
+    my $self  = shift;
+    my $class = ref($self) || $self;
+
+    if ( $class eq __PACKAGE__ ) {
+        die "Can't create instance of class " . $class
+        . ", use a language sub-class instead";
+    }
+
+    my $new_obj = bless {}, $class;
+    $new_obj->init(@_);
+    return $new_obj;
+}
+
 sub init {
     my $self   = shift;
     my %params = @_;
 
-    for my $rp (qw<lang>) {
-        die "Missing required NQP::Config constructor parameter $rp"
-          unless defined $params{$rp};
-    }
-
     my $base_dir = nfp($FindBin::Bin);
+
+    my $lang = $params{lang} // (split /::/, ref($self))[-1];
 
     $self->{config} = {
         perl          => $^X,
@@ -59,8 +70,8 @@ sub init {
 
         # Number of spaces to indent filelists in a makefile
         filelist_indent => 4,
-        lang            => $params{lang},
-        lclang          => lc $params{lang},
+        lang            => $lang,
+        lclang          => lc $lang,
     };
 
     @{ $self->{config} }{qw<exe bat cpsep>} =
@@ -858,6 +869,25 @@ sub set_key {
     return $self->{config}{$key} = $val;
 }
 
+sub config {
+    my $self   = shift;
+    my %params = @_;
+
+    return $self->{config} if $params{no_ctx};
+
+    my %config = %{ $self->{config} };
+
+    for my $ctx ( @{ $self->{contexts} } ) {
+
+        # Reversing because the first must override the last.
+        for my $ctx_cfg ( reverse @{ $ctx->{configs} } ) {
+            @config{ keys %$ctx_cfg } = values %$ctx_cfg;
+        }
+    }
+
+    return \%config;
+}
+
 # Searches for a config variable in contexts (from latest pushed upwards) and
 # then in the main config. If context contains more than one config hash in
 # configs key then they're searched forward, from the first to the last.
@@ -878,6 +908,23 @@ sub cfg {
       if $params{strict} && !exists $self->{config}{$var};
 
     return $self->{config}{$var};
+}
+
+# Set a configuration variable. Not that by default variable is set on the root
+# config hash.
+sub set {
+    my $self = shift;
+    my $key = shift;
+    my $val = shift;
+    my %params = @_;
+
+    unless ($params{in_ctx}) {
+        $self->{config}{$key} = $val;
+    } else {
+        $self->{contexts}[-1]{config}{$key} = $val;
+    }
+
+    return $self;
 }
 
 # Same as cfg but looking for a property, i.e. a key on a context or config
@@ -908,25 +955,6 @@ sub in_ctx {
     }
 
     return 0;
-}
-
-sub config {
-    my $self   = shift;
-    my %params = @_;
-
-    return $self->{config} if $params{no_ctx};
-
-    my %config = %{ $self->{config} };
-
-    for my $ctx ( @{ $self->{contexts} } ) {
-
-        # Reversing because the first must override the last.
-        for my $ctx_cfg ( reverse @{ $ctx->{configs} } ) {
-            @config{ keys %$ctx_cfg } = values %$ctx_cfg;
-        }
-    }
-
-    return \%config;
 }
 
 #########################################################
@@ -1023,73 +1051,6 @@ sub read_config {
         last if %config;
     }
     return %config;
-}
-
-### Tieing-related stuff
-sub TIEHASH {
-    my $class  = shift;
-    my %params = @_;
-    if ( $class eq __PACKAGE__ ) {
-        if ( $params{lang} ) {
-            $class .= "::$params{lang}";
-            eval "require $class";
-            if ($@) {
-                die "===SORRY!=== Can't create an instance of "
-                  . $class . ":\n"
-                  . $@;
-            }
-        }
-        else {
-            die "Can't create instance of class " . $class
-              . ", use a language sub-class instead";
-        }
-    }
-    my $self = bless {}, $class;
-    return $self->init(@_);
-}
-
-sub FETCH {
-    my $self = shift;
-    my $key  = shift;
-    return $self->{config}{$key};
-}
-
-sub STORE {
-    my $self = shift;
-    my ( $key, $val ) = @_;
-    return $self->set_key( $key, $val );
-}
-
-sub DELETE {
-    my $self = shift;
-    my $key  = shift;
-    delete $self->{config}{$key};
-}
-
-sub CLEAR {
-    my $self = shift;
-    $self->{config} = {};
-}
-
-sub EXISTS {
-    my $self = shift;
-    my $key  = shift;
-    exists $self->{config}{$key};
-}
-
-sub FIRSTKEY {
-    my $self = shift;
-    each %{ $self->{config} };
-}
-
-sub NEXTKEY {
-    my $self = shift;
-    each %{ $self->{config} };
-}
-
-sub SCALAR {
-    my $self = shift;
-    %{ $self->{config} };
 }
 
 1;
