@@ -135,6 +135,12 @@ The macro name stands for Normalize File Path. Converts Unix-style paths with
 `/` directory separator into what is suitable for the current OS. Most typical
 example is Windows where slashes are replaced with backslashes.
 
+### abs2rel(file1 file2 ...)
+
+_Pre-expanded_
+
+Makes all file paths relative to `@base_dir@`.
+
 ### uc(text), lc(text)
 
 _Pre-expanded_
