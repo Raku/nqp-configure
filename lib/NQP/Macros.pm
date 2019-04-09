@@ -615,7 +615,6 @@ sub _m_nfp {
 sub _m_abs2rel {
     my $self     = shift;
     my $base_dir = $self->cfg->cfg('base_dir');
-    say STDERR "Using basedir: $base_dir";
     return $self->_iterate_ws_list(
         sub {
             NQP::Config::nfp(
