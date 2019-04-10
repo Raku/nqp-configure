@@ -322,10 +322,16 @@ sub is_including {
     return 0;
 }
 
+sub splitwords {
+    my $str = shift;
+    $str =~ s{\\}{\\\\}sg;    # quote all \ chars for shellwords.
+    return shellwords($str);
+}
+
 sub include {
     my $self      = shift;
     my $filenames = shift;
-    my @filenames = ref($filenames) ? @$filenames : shellwords($filenames);
+    my @filenames = ref($filenames) ? @$filenames : splitwords($filenames);
     my %params    = @_;
     my $text      = "";
     my $cfg       = $self->{config_obj};
@@ -398,7 +404,7 @@ sub find_filepath {
     my $self      = shift;
     my $filenames = shift;
     my %params    = @_;
-    my @filenames = shellwords($filenames);
+    my @filenames = splitwords($filenames);
     my $cfg       = $self->{config_obj};
     my @out;
 
@@ -527,7 +533,7 @@ sub _m_insert_capture {
     my $self     = shift;
     my $cfg      = $self->{config_obj};
     my $cmd_line = shift;
-    my $cmd      = ( shellwords($cmd_line) )[0];
+    my $cmd      = ( splitwords($cmd_line) )[0];
     $self->throw("No executable '$cmd' found") unless can_run($cmd);
     my $out;
     my ( $ok, $err ) = run( command => $cmd_line, buffer => \$out );
@@ -649,10 +655,10 @@ sub _m_lc {
 sub _valstr { defined $_[0] ? $_[0] : '*undef*' }
 
 sub _varinfo {
-    my $self  = shift;
-    my $param = shift;
+    my $self   = shift;
+    my $param  = shift;
     my %params = @_;
-    my @vars  = shellwords($param);
+    my @vars   = splitwords($param);
 
     my $max_key_length = 10;
 
@@ -718,7 +724,9 @@ sub _m_varinfo {
 
 sub _m_print_varinfo {
     my $self = shift;
-    return $self->_varinfo(shift, console => 1);
+    return $self->_varinfo( shift, console => 1 );
 }
 
 1;
+
+# vim: ft=perl
