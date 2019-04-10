@@ -640,9 +640,10 @@ sub _m_lc {
 # Dumps information about the context where the variable is defined.
 sub _valstr { defined $_[0] ? $_[0] : '*undef*' }
 
-sub _m_varinfo {
+sub _varinfo {
     my $self  = shift;
     my $param = shift;
+    my %params = @_;
     my @vars  = shellwords($param);
 
     my $max_key_length = 10;
@@ -698,7 +699,18 @@ sub _m_varinfo {
         }
         $out .= "# $line\n";
     }
+    print $out if $params{console};
     return $out;
+}
+
+sub _m_varinfo {
+    my $self = shift;
+    return $self->_varinfo(shift);
+}
+
+sub _m_print_varinfo {
+    my $self = shift;
+    return $self->_varinfo(shift, console => 1);
 }
 
 1;
