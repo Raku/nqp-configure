@@ -47,20 +47,28 @@ sub message {
 
     my $file = "*no file?*";
     my @contexts =
-      $self->{contexts}
-      ? @{ $self->{contexts} }
-      : ( $self->{macro_obj} ? ( $self->{macro_obj}->cfg->contexts ) : () );
+      reverse(
+        $self->{contexts}
+        ? @{ $self->{contexts} }
+        : ( $self->{macro_obj} ? ( $self->{macro_obj}->cfg->contexts ) : () )
+      );
+    my @in;
     for my $ctx (@contexts) {
         if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
             $file = $newfile;
         }
         if ( $ctx->{current_macro} ) {
-            push @msg,
-              $indent->(
-"... in macro $ctx->{current_macro}($ctx->{current_param}) at $file"
-              );
-            $level++;
+            push @in,
+                "... in macro "
+              . $ctx->{current_macro} . "("
+              . $ctx->{current_param}
+              . ") at $file";
         }
+    }
+
+    for my $msg (reverse @in) {
+        push @msg, $indent->($msg);
+        ++$level;
     }
 
     push @msg, $indent->( $self->{callstack} );
