@@ -47,11 +47,9 @@ sub message {
 
     my $file = "*no file?*";
     my @contexts =
-      reverse(
-        $self->{contexts}
-        ? @{ $self->{contexts} }
-        : ( $self->{macro_obj} ? ( $self->{macro_obj}->cfg->contexts ) : () )
-      );
+      $self->{contexts}
+      ? @{ $self->{contexts} }
+      : ( $self->{macro_obj} ? ( $self->{macro_obj}->cfg->contexts ) : () );
     for my $ctx (@contexts) {
         if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
             $file = $newfile;
@@ -636,6 +634,71 @@ sub _m_uc {
 # Converts string to all lowercase
 sub _m_lc {
     lc $_[1];
+}
+
+# varinfo(var1 var2 ...)
+# Dumps information about the context where the variable is defined.
+sub _valstr { defined $_[0] ? $_[0] : '*undef*' }
+
+sub _m_varinfo {
+    my $self  = shift;
+    my $param = shift;
+    my @vars  = shellwords($param);
+
+    my $max_key_length = 10;
+
+    my $rep = sub {
+        my ( $key, $val ) = @_;
+        $max_key_length = length $key if length $key > $max_key_length;
+        return [ $key, _valstr($val) ] unless ref($val);
+        local $Data::Dumper::Terse = 1;
+        my @lines = split /\n/s, Dumper($val);
+        my @rc    = [ $key, _valstr( shift @lines ) ];
+        push @rc, map { [ '', _valstr($_) ] } @lines;
+        return @rc;
+    };
+
+    my $out = "\n";
+    my @report;
+    for my $var (@vars) {
+        my ( $val, $ctx ) = $self->cfg->cfg( $var, with_ctx => 1 );
+        push @report, "*** Variable $var", [ VALUE => $val ];
+        if ($ctx) {
+            my $from = $ctx->{'.ctx'}{from};
+            push @report,
+                "*** Containting context created by "
+              . "$from->{sub} "
+              . "at $from->{file}:$from->{line}", "*** Context keys:";
+            for my $ckey ( sort keys %$ctx ) {
+                next if $ckey =~ /^(?:configs|\.ctx)$/;
+                push @report, $rep->( $ckey, $ctx->{$ckey} );
+            }
+
+            push @report, "*** Context configuration variables:";
+
+            for my $config ( @{ $ctx->{configs} } ) {
+                for my $ckey ( sort keys %$config ) {
+                    push @report, $rep->( $ckey, $config->{$ckey} );
+                }
+            }
+        }
+        else {
+            push @report, "*** Not from a context ***";
+        }
+        push @report, "*** End of variable $var";
+    }
+
+    for my $rline (@report) {
+        my $line;
+        if ( ref($rline) ) {
+            $line = sprintf( "%-${max_key_length}s: %s", @$rline );
+        }
+        else {
+            $line = $rline;
+        }
+        $out .= "# $line\n";
+    }
+    return $out;
 }
 
 1;

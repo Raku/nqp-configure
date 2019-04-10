@@ -902,7 +902,12 @@ sub cfg {
     for my $ctx ( $self->contexts ) {
         my $configs = $ctx->{configs};
         for my $config (@$configs) {
-            return $config->{$var} if exists $config->{$var};
+            if (exists $config->{$var}) {
+                if ($params{with_ctx} && wantarray) {
+                    return ($config->{$var}, $ctx);
+                }
+                return $config->{$var};
+            }
         }
     }
 
