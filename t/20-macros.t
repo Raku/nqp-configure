@@ -1,11 +1,12 @@
 use lib 'lib';
 use NQP::Macros;
 use NQP::Config;
+use NQP::Config::Test;
 use Test::More;
 
 use v5.12;
 
-my $config = tie my %config, 'NQP::Config', lang => 'Test';
+my $config = NQP::Config::Test->new;
 
 my $macros = NQP::Macros->new(config => $config);
 
