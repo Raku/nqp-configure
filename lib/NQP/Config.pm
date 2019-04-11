@@ -35,7 +35,7 @@ use ExtUtils::Command;
 $SIG{__DIE__} = sub { confess @_ };
 
 use base qw<Exporter>;
-our @EXPORT = qw<rm_d>;
+our @EXPORT    = qw<rm_l>;
 our @EXPORT_OK = qw<
   nfp slash slurp system_or_die cmp_rev read_config
 >;
@@ -367,6 +367,7 @@ sub configure_commands {
         $config->{cp}     = 'cp --';
         $config->{rm_f}   = 'rm -f --';
         $config->{rm_rf}  = 'rm -rf --';
+        $config->{rm_l}   = 'rm -f --';
         $config->{test_f} = 'test -f --';
     }
     else {
@@ -375,6 +376,11 @@ sub configure_commands {
         $config->{cp}     = '$(PERL5) -MExtUtils::Command -e cp';
         $config->{rm_f}   = '$(PERL5) -MExtUtils::Command -e rm_f';
         $config->{rm_rf}  = '$(PERL5) -MExtUtils::Command -e rm_rf';
+        $config->{rm_l} =
+            '$(PERL5) -I'
+          . nfp( $self->cfg('base_dir') . '/3rdparty/nqp-config/lib' )
+          . ' -MNQP::Config -e rm_l';
+        $config->{test_f} = '$(PERL5) -MExtUtils::Command -e test_f';
         $config->{test_f} = '$(PERL5) -MExtUtils::Command -e test_f';
     }
 }
@@ -857,8 +863,11 @@ sub push_ctx {
 
     push @{ $self->{contexts} }, $ctx;
 
-    return NQP::Config::_Scoping->new( \&_restore_ctx, obj => $self,
-        ctx => $ctx );
+    return NQP::Config::_Scoping->new(
+        \&_restore_ctx,
+        obj => $self,
+        ctx => $ctx
+    );
 }
 
 sub pop_ctx {
@@ -904,9 +913,9 @@ sub cfg {
     for my $ctx ( $self->contexts ) {
         my $configs = $ctx->{configs};
         for my $config (@$configs) {
-            if (exists $config->{$var}) {
-                if ($params{with_ctx} && wantarray) {
-                    return ($config->{$var}, $ctx);
+            if ( exists $config->{$var} ) {
+                if ( $params{with_ctx} && wantarray ) {
+                    return ( $config->{$var}, $ctx );
                 }
                 return $config->{$var};
             }
@@ -993,10 +1002,17 @@ sub nfp {
 }
 
 # Command line support, similar to ExtUtils::Command
-sub rm_d {
+sub rm_l {
     ExtUtils::Command::expand_wildcards();
-    for (@ARGV) {
-        rmdir or die "Can't delete directory $_: $!";
+    for my $link (@ARGV) {
+        my $rc;
+        if ( $^O eq 'MSWin32' ) {
+            $rc = rmdir $link;
+        }
+        else {
+            unlink $link;
+        }
+        die "Can't delete directory $_: $!" unless $rc;
     }
 }
 
