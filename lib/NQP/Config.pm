@@ -30,10 +30,12 @@ use NQP::Macros;
 use IPC::Cmd qw<can_run>;
 use Cwd;
 use Carp;
+use ExtUtils::Command;
 
 $SIG{__DIE__} = sub { confess @_ };
 
 use base qw<Exporter>;
+our @EXPORT = qw<rm_d>;
 our @EXPORT_OK = qw<
   nfp slash slurp system_or_die cmp_rev read_config
 >;
@@ -988,6 +990,14 @@ sub nfp {
     my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
     return File::Spec->catpath( $vol,
         File::Spec->catdir( File::Spec->splitdir($dirs) ), $file );
+}
+
+# Command line support, similar to ExtUtils::Command
+sub rm_d {
+    ExtUtils::Command::expand_wildcards();
+    for (@ARGV) {
+        rmdir or die "Can't delete directory $_: $!";
+    }
 }
 
 sub system_or_die {
