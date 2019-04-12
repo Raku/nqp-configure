@@ -378,7 +378,7 @@ sub configure_commands {
         $config->{rm_rf}  = '$(PERL5) -MExtUtils::Command -e rm_rf';
         $config->{rm_l} =
             '$(PERL5) -I'
-          . nfp( $self->cfg('base_dir') . '/3rdparty/nqp-config/lib' )
+          . nfp( $self->cfg('base_dir') . '/3rdparty/nqp-configure/lib' )
           . ' -MNQP::Config -e rm_l';
         $config->{test_f} = '$(PERL5) -MExtUtils::Command -e test_f';
         $config->{test_f} = '$(PERL5) -MExtUtils::Command -e test_f';
