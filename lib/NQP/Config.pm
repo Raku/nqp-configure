@@ -21,7 +21,6 @@ package NQP::Config;
 use strict;
 use warnings;
 use File::Spec;
-use File::Spec::Win32;
 use File::Spec::Unix;
 use File::Basename;
 use FindBin;
@@ -997,8 +996,8 @@ sub slurp {
 
 sub nfp {
     my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
-    return File::Spec->catpath( $vol,
-        File::Spec->catdir( File::Spec->splitdir($dirs) ), $file );
+    return File::Spec->canonpath(File::Spec->catpath( $vol,
+        File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file ));
 }
 
 # Command line support, similar to ExtUtils::Command
