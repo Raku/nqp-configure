@@ -996,8 +996,12 @@ sub slurp {
 
 sub nfp {
     my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
-    return File::Spec->canonpath(File::Spec->catpath( $vol,
-        File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file ));
+    return File::Spec->canonpath(
+        File::Spec->catpath(
+            $vol,
+            File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
+        )
+    );
 }
 
 # Command line support, similar to ExtUtils::Command
