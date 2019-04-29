@@ -36,8 +36,47 @@ $SIG{__DIE__} = sub { confess @_ };
 use base qw<Exporter>;
 our @EXPORT    = qw<rm_l>;
 our @EXPORT_OK = qw<
-  nfp slash slurp system_or_die cmp_rev read_config
+  os2platform slash slurp system_or_die cmp_rev read_config
 >;
+
+# Platform names will be incorporated into a regexp.
+# unix will be used as the last resort option and thus will always be tested
+# last.
+my %os_platforms = (
+    'windows' => [qw<MSWin32 os2>],
+    'vms'     => [qw<VMS>],
+    'unix'    => [qw<.*>],
+);
+
+my %platform_vars = (
+    bat => {
+        windows => '.bat',
+        default => '',
+
+    },
+    exe => {
+        windows => '.exe',
+        default => '',
+    },
+    cpsep => {
+        windows => ';',
+        default => ':',
+    },
+    env_open => {
+        windows => '%',
+        vms     => '%%',
+        unix    => '$',
+    },
+    env_close => {
+        windows => '%',
+        vms     => '%%',
+        unix    => '',
+    },
+    quote => {
+        windows => q<">,
+        default => q<'>,
+    },
+);
 
 sub new {
     my $self  = shift;
@@ -48,7 +87,7 @@ sub new {
           . ", use a language sub-class instead";
     }
 
-    my $new_obj = bless {}, $class;
+    my $new_obj = bless { config => {}, }, $class;
     $new_obj->init(@_);
     return $new_obj;
 }
@@ -57,31 +96,22 @@ sub init {
     my $self   = shift;
     my %params = @_;
 
+    my $config = $self->{config};
+
     $self->{quiet} = 0;
 
-    my $base_dir = nfp( $params{base_dir} // $FindBin::Bin );
+    $self->configure_platform;
 
     my $lang = $params{lang} // ( split /::/, ref($self) )[-1];
 
-    $self->{config} = {
-        perl          => $^X,
-        slash         => slash(),
-        shell         => $^O eq 'solaris' ? '' : "SHELL = " . $self->shell_cmd,
-        base_dir      => $base_dir,
-        lang          => $lang,
-        lclang        => lc $lang,
-        build_dir     => File::Spec->catdir( $base_dir, 'tools', 'build' ),
-        templates_dir => File::Spec->catdir( $base_dir, 'tools', 'templates' ),
-        configure_script => File::Spec->canonpath(
-            File::Spec->catfile( $base_dir, $FindBin::Script )
-        ),
-        filelist_indent => 4,    # Num spaces to indent filelists in a makefile
-    };
+    $config->{perl}   = $^X;
+    $config->{slash}  = slash();
+    $config->{shell}  = $^O eq 'solaris' ? '' : "SHELL = " . $self->shell_cmd;
+    $config->{lang}   = $lang;
+    $config->{lclang} = lc $lang;
 
-    @{ $self->{config} }{qw<exe bat cpsep>} =
-      $self->is_win ? ( '.exe', '.bat', ';', ) : ( "", "", ":", );
-
-    $self->{config}{runner_suffix} = $self->{config}{bat};
+    # Num of spaces to indent filelists in a makefile
+    $config->{filelist_indent} = 4;
 
     $self->{backend_prefix} = {
         moar => 'm',
@@ -288,6 +318,37 @@ sub base_path {
     return File::Spec->catfile( $self->{config}{base_dir}, @rel_path );
 }
 
+# This one is called by init
+sub configure_platform {
+    my $self   = shift;
+    my $config = $self->{config};
+
+    $config->{OS} //= $^O;
+    $config->{platform} = os2platform( $config->{OS} );
+
+    for my $var ( keys %platform_vars ) {
+        my $val =
+          $platform_vars{$var}{ $config->{platform} }
+          // $platform_vars{$var}{default} // die(
+            "Config variable '$var' is not defined for $config->{platform}");
+        $config->{$var} = $val;
+    }
+}
+
+sub configure_paths {
+    my $self   = shift;
+    my $config = $self->{config};
+
+    my $base_dir = $self->nfp( $FindBin::Bin, no_quote => 1 );
+
+    $config->{base_dir}  = $base_dir;
+    $config->{build_dir} = File::Spec->catdir( $base_dir, 'tools', 'build' );
+    $config->{templates_dir} =
+      File::Spec->catdir( $base_dir, 'tools', 'templates' );
+    $config->{configure_script} = File::Spec->canonpath(
+        File::Spec->catfile( $base_dir, $FindBin::Script ) );
+}
+
 sub configure_jars {
     my $self    = shift;
     my $config  = $self->{config};
@@ -391,7 +452,7 @@ sub configure_commands {
         $config->{rm_rf}  = '$(PERL5) -MExtUtils::Command -e rm_rf';
         $config->{rm_l} =
             '$(PERL5) -I'
-          . nfp( $self->cfg('base_dir') . '/3rdparty/nqp-configure/lib' )
+          . $self->nfp( $self->cfg('base_dir') . '/3rdparty/nqp-configure/lib' )
           . ' -MNQP::Config -e rm_l';
         $config->{test_f} = '$(PERL5) -MExtUtils::Command -e test_f';
         $config->{test_f} = '$(PERL5) -MExtUtils::Command -e test_f';
@@ -414,6 +475,9 @@ sub configure_misc {
 sub configure_refine_vars {
     my $self   = shift;
     my $config = $self->{config};
+
+    $self->{config}{runner_suffix} = $self->{config}{bat};
+
     unless ( $config->{prefix} ) {
 
         # XXX This is only Unix-friendly way.
@@ -487,7 +551,7 @@ sub configure_from_options {
     for my $opt ( grep { !/^gen-/ } keys %{ $self->{options} } ) {
         push @subopts, qq{--$opt="$self->{options}{$opt}"};
     }
-    $config->{configure} = join( " ", $config->{configure_script}, @subopts );
+    $config->{configure_opts} = join( " ", @subopts );
 
     my ( $template, $out );
     if ( $self->option('expand') ) {
@@ -650,7 +714,7 @@ sub include_path {
     return join( "\n", @incs );
 }
 
-sub find_file_path {
+sub find_filepath {
     my $self   = shift;
     my $src    = shift;
     my %params = @_;
@@ -691,12 +755,12 @@ sub find_file_path {
 
 sub template_file_path {
     my $self = shift;
-    return $self->find_file_path( shift, suffix => ".in", @_ );
+    return $self->find_filepath( shift, suffix => ".in", @_ );
 }
 
 sub build_file_path {
     my $self = shift;
-    return $self->find_file_path(
+    return $self->find_filepath(
         shift,
         where    => 'build',
         suffixes => [qw<.pl .nqp .p6>],
@@ -1043,6 +1107,43 @@ sub in_ctx {
     return 0;
 }
 
+sub shell_quote_filename {
+    my $self     = shift;
+    my $filename = shift;
+
+    return $filename unless $filename =~ /\s/;
+
+    my $platform = $self->cfg('platform');
+
+    my $qchar = $self->cfg('quote');
+    my $out = $filename;
+
+    if ( $platform eq 'windows' ) {
+        $filename =~ s{(["%])}{$1$1}g;
+    }
+    elsif ( $platform eq 'unix' ) {
+        $filename =~ s{'}{'\\''}g;
+    }
+
+    $out = "$qchar$filename$qchar";
+
+    return $out;
+}
+
+sub nfp {
+    my $self = shift;
+    my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
+    my %params   = @_;
+    my $filename = File::Spec->canonpath(
+        File::Spec->catpath(
+            $vol,
+            File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
+        )
+    );
+    $filename = $self->shell_quote_filename($filename) unless $params{no_quote};
+    return $filename;
+}
+
 #########################################################
 ### Non-method subs
 #########################################################
@@ -1062,14 +1163,22 @@ sub slurp {
     return $text;
 }
 
-sub nfp {
-    my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
-    return File::Spec->canonpath(
-        File::Spec->catpath(
-            $vol,
-            File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
-        )
-    );
+sub os2platform {
+    my $os = shift // $^O;
+
+    # Make unix always be the last tried
+    my @platforms = ( ( grep { $_ ne 'unix' } keys %os_platforms ), 'unix' );
+
+    my $platform;
+    for my $p (@platforms) {
+        my $p_or = "(?:" . join( "|", @{ $os_platforms{$p} } ) . ")";
+        if ( $os =~ /^$p_or$/ ) {
+            $platform = $p;
+            last;
+        }
+    }
+
+    $platform;
 }
 
 # Command line support, similar to ExtUtils::Command

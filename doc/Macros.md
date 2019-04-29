@@ -60,22 +60,25 @@ which implicitly turns of the pre-expansion.  Here is an example:
 
 ```
 @nfp(@prefix@/@custom_macro()@/@file@)@
+@nfpl(dir/file1 dir/file2)@
 ```
 
 `nfp` stands for _normalize file path_. It converts a Unix-style path into
-a format suitable for the OS we build on. The problem is that we know that
-`@prefix@` is already normalized. Lets assume that `@custom_macro()@` does so
-too, and `@file@`... Generally saying, the result of normalization migh be not
-what we would expect from it if it performed on pre-normalized path names.
+a format suitable for the OS we build on. There could be a problem if `@prefix@`
+is already normalized. Lets assume that `@custom_macro()@` is too, as well as
+`@file@`... Generally saying, the result of normalization migh be not what we
+would expect from it if it performed on pre-normalized path names.  Normally, it
+is an "Ok" situation for as far as I know but nobody can guarantee that it would
+be so on any existing or a future platform.
 
 One solutions would to use `@slash@` instead of `/`. Ugly and possibly
-unreliable. Wrapping each `/` with `nfp`?? Well, no!..
+unreliable. Wrapping each `/` with `nfp`?? Oh, no!.. But
 
 ```
 @expand(@!nfp(@prefix@/@custom_macro()@/@file@)@)@
 ```
 
-This is considered to be the most reliable solution.
+is considered to be the most reliable way to get the job done.
 
 ## Contexts
 
@@ -127,13 +130,68 @@ Escapes newlines in the parameter with `\`.
 
 Very simple unescaping. Replaces all `\<char>` sequences with `<char>`.
 
-### nfp(file1 file2 ...)
+### nfp(path/file), nfpl(path1/file1 path2/file2 ...)
 
 _Pre-expanded_
 
 The macro name stands for Normalize File Path. Converts Unix-style paths with
 `/` directory separator into what is suitable for the current OS. Most typical
-example is Windows where slashes are replaced with backslashes.
+example is Windows where slashes are replaced with backslashes. 
+
+If a path contains whitespaces it will be quoted following the quoting rules of
+the current platform. For example:
+
+```
+@nfp(a\ path/to/file)@
+```
+
+will produce:
+
+```
+'a path/to/file'
+```
+
+on a \*nix platform, and
+
+```
+"a path\to\file"
+```
+
+on a DOS-like platform.
+
+`nfpl` is a modification of nfp which acts on a whitespace separated list of
+paths. So, where `nfp` takes a path as-is even if it contains spaces, `nfpl`
+requires non-separating spaces to be escaped with `\`:
+
+```
+@nfpl(a\ path/to/file and/another/file)@
+```
+
+If `nfpl` text contains another macro or a configuration variable, it is
+recommended to use `@@` expansion form:
+
+```
+@nfpl(@@base-dir@@/file1 @@base_dir@@/file2)@
+
+```
+
+But generally, `nfpl` is recommended for use on lists of simple relative paths
+like `src/Perl6/Actions.nqp src/Perl6/PodActions.nqp`.
+
+### shquot(path/file)
+
+_Pre-expanded_
+
+Quotes path if necessary by using rules valid for the shell of the current
+platform. This is what `nfp` does but without mangling with the slashes. In
+other words, this macro expects the path to be already valid for the current
+platform. This could be guaranted, for example, if the path was obtained with
+`script` or `template` macros:
+
+```
+target: $(DEPS)
+    $(PERL5) @shquot(@script(myscript.pl)@)@
+```
 
 ### abs2rel(file1 file2 ...)
 
@@ -146,6 +204,12 @@ Makes all file paths relative to `@base_dir@`.
 _Pre-expanded_
 
 Convert text into all upper/lower case respectively.
+
+### envvar(VARNAME)
+
+Generates environment variable in the format understood by the current platform.
+I.e. for `@envvar(VAR)@` it will generate `$VAR` on \*nix and `%VAR%` on
+DOS-derivatives (Windows, OS/2).
 
 ### for_backends(text)
 

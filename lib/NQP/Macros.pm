@@ -66,7 +66,7 @@ sub message {
         }
     }
 
-    for my $msg (reverse @in) {
+    for my $msg ( reverse @in ) {
         push @msg, $indent->($msg);
         ++$level;
     }
@@ -84,11 +84,11 @@ use IPC::Cmd qw<can_run run>;
 require NQP::Config;
 
 my %preexpand = map { $_ => 1 } qw<
-  include include_capture
+  include include_capture nfp nfpl
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
-  sp_escape nl_escape fixup uc lc nfp abs2rel
-
+  sp_escape nl_escape fixup uc lc abs2rel
+  shquot
 >;
 
 # Hash of externally registered macros.
@@ -562,7 +562,7 @@ sub _m_insert_filelist {
     my $indent = " " x ( $cfg->{config}{filelist_indent} || 4 );
     my $file   = $cfg->template_file_path( shift, required => 1 );
     my $text   = NQP::Config::slurp($file);
-    my @flist  = map { NQP::Config::nfp($_) } grep { $_ } split /\s+/s, $text;
+    my @flist  = map { $cfg->nfp($_) } grep { $_ } split /\s+/s, $text;
     $text = join " \\\n$indent", @flist;
     return $text;
 }
@@ -601,11 +601,13 @@ sub _iterate_ws_list {
     my $cb   = shift;
     $self->throw("_iterate_filelist callback isn't a code ref")
       unless ref($cb) eq 'CODE';
-    my @elems = split /(\s+)/s, shift;
+
+    my @elems = split /((?:(?<!\\)\s)+)/s, shift;
     my $out   = "";
     while (@elems) {
         my ( $file, $ws ) = ( shift @elems, shift @elems );
         if ($file) {    # If text starts with spaces $file will be empty
+            $file = $self->_m_unescape($file);
             $file = $cb->($file);
         }
         $out .= $file . ( $ws // "" );
@@ -613,22 +615,39 @@ sub _iterate_ws_list {
     return $out;
 }
 
+# nfpl(dir1/file1 dir2/file2)
+# Normalizes a Unix-style file path for the current OS. Also quotes path if it
+# contains spaces or $ or % on *nix/Windows. Non-separating whitespaces must be
+# quoted with \
+sub _m_nfpl {
+    my $self = shift;
+    my $cfg  = $self->cfg;
+    return $self->_iterate_ws_list( sub { $cfg->nfp( $_[0] ); }, shift );
+}
+
 # nfp(dir/file)
-# Normalizes a Unix-style file path for the current OS. Mostly for replacing
-# / with \ for Win*
+# Similar to nfpl but expects only one path as input and doesn't require
+# escaping of whitespaces.
 sub _m_nfp {
     my $self = shift;
-    return $self->_iterate_ws_list( sub { NQP::Config::nfp( $_[0] ); }, shift );
+    return $self->cfg->nfp(shift);
+}
+
+# shquot(dir1/file1)
+sub _m_shquot {
+    my $self = shift;
+    return $self->cfg->shell_quote_filename(shift);
 }
 
 # abs2rel(file1 file2)
 # Converts absolute file path into relative to @base_dir@
 sub _m_abs2rel {
     my $self     = shift;
-    my $base_dir = $self->cfg->cfg('base_dir');
+    my $cfg      = $self->cfg;
+    my $base_dir = $cfg->cfg('base_dir');
     return $self->_iterate_ws_list(
         sub {
-            NQP::Config::nfp(
+            $cfg->nfp(
                 File::Spec->abs2rel(
                     File::Spec->rel2abs( $_[0], $base_dir ), $base_dir
                 )
@@ -648,6 +667,19 @@ sub _m_uc {
 # Converts string to all lowercase
 sub _m_lc {
     lc $_[1];
+}
+
+# envvar(VARNAME1 VARNAME2)
+# Generates OS-specific environment variable syntax. I.e. $VARNAME1 for *ix,
+# %VARNAME1% for Win, %%VARNAME1%% for VMS.
+sub _m_envvar {
+    my $self = shift;
+
+    my $cfg    = $self->cfg;
+    my $eopen  = $cfg->cfg('env_open');
+    my $eclose = $cfg->cfg('env_close');
+
+    return $self->_iterate_ws_list( sub { "${eopen}$_[0]${eclose}" }, shift );
 }
 
 # varinfo(var1 var2 ...)
