@@ -26,7 +26,7 @@ use File::Basename;
 use FindBin;
 use Data::Dumper;
 use NQP::Macros;
-use IPC::Cmd qw<can_run>;
+use IPC::Cmd qw<can_run run>;
 use Cwd;
 use Carp;
 use ExtUtils::Command;
@@ -36,7 +36,7 @@ $SIG{__DIE__} = sub { confess @_ };
 use base qw<Exporter>;
 our @EXPORT    = qw<rm_l>;
 our @EXPORT_OK = qw<
-  os2platform slash slurp system_or_die cmp_rev read_config
+  os2platform slash slurp system_or_die run_or_die cmp_rev read_config
 >;
 
 # Platform names will be incorporated into a regexp.
@@ -339,7 +339,7 @@ sub configure_paths {
     my $self   = shift;
     my $config = $self->{config};
 
-    my $base_dir = $self->nfp( $FindBin::Bin, no_quote => 1 );
+    my $base_dir = $self->nfp($FindBin::Bin);
 
     $config->{base_dir}  = $base_dir;
     $config->{build_dir} = File::Spec->catdir( $base_dir, 'tools', 'build' );
@@ -548,7 +548,11 @@ sub configure_from_options {
       if $self->{options}{'makefile-timing'};
 
     my @subopts;
-    for my $opt ( grep { !/^gen-/ } keys %{ $self->{options} } ) {
+
+    # ignorable_opt must be defined by lang-specific child class.
+    for
+      my $opt ( grep { !$self->ignorable_opt($_) } keys %{ $self->{options} } )
+    {
         push @subopts, qq{--$opt="$self->{options}{$opt}"};
     }
     $config->{configure_opts} = join( " ", @subopts );
@@ -568,30 +572,46 @@ sub configure_from_options {
     }
     $self->{template} = $template;
     $self->{out}      = $out if $out && ( $out ne '-' );
+
+    for ( @{ $self->option('set-var') // [] } ) {
+        if (/^(\w+)=(.*)$/) {
+            $config->{$1} = $2;
+        }
+        else {
+            die "Bad set config variable string: '$_'";
+        }
+    }
 }
 
 sub expand_template {
     my $self = shift;
 
     my $outh;
+    eval {
 
-    if ( $self->{out} ) {
-        open $outh, '>', $self->{out}
-          or die "Cannot open '$self->{out}' for writing: $!";
-    }
-    else {
-        $outh = \*STDOUT;
-    }
+        if ( $self->{out} ) {
+            open $outh, '>', $self->{out}
+              or die "Cannot open '$self->{out}' for writing: $!";
+        }
+        else {
+            $outh = \*STDOUT;
+        }
 
-    print $outh $self->{out_header} if $self->{out_header};
+        print $outh $self->{out_header} if $self->{out_header};
 
-    $self->fill_template_file(
-        $self->template_file_path( $self->{template}, required => 1 ),
-        $outh, as_is => $self->{expand_as_is} );
+        $self->fill_template_file(
+            $self->template_file_path( $self->{template}, required => 1 ),
+            $outh, as_is => $self->{expand_as_is} );
 
-    if ( $self->{out} ) {
-        close $outh
-          or die "Error while writing to '$self->{out}': $!";
+        if ( $self->{out} ) {
+            close $outh
+              or die "Error while writing to '$self->{out}': $!";
+        }
+    };
+    if ($@) {
+        close $outh if $outh;
+        unlink $self->{out};
+        die $@;
     }
 }
 
@@ -733,7 +753,7 @@ sub find_filepath {
 
     my $where = $params{where} || 'templates';
     my $where_dir = $self->cfg( "${where}_dir", strict => 1 );
-    my @suffixes  = ("");
+    my @suffixes;
     push @suffixes, $params{suffix}        if $params{suffix};
     push @suffixes, @{ $params{suffixes} } if $params{suffixes};
 
@@ -755,7 +775,11 @@ sub find_filepath {
 
 sub template_file_path {
     my $self = shift;
-    return $self->find_filepath( shift, suffix => ".in", @_ );
+    return $self->find_filepath(
+        shift,
+        suffixes => [ "." . $self->cfg('platform'), ".in", "" ],
+        @_
+    );
 }
 
 sub build_file_path {
@@ -763,7 +787,7 @@ sub build_file_path {
     return $self->find_filepath(
         shift,
         where    => 'build',
-        suffixes => [qw<.pl .nqp .p6>],
+        suffixes => [ qw<.pl .nqp .p6>, "" ],
         @_
     );
 }
@@ -802,9 +826,6 @@ sub fill_template_file {
         print $OUT $text;
         print $OUT "\n\n# (end of section generated from $ifpath)\n\n"
           unless $params{as_is};
-    }
-    unless ( ref $outfile ) {
-        close($OUT) or die "Error while writing '$outfile': $!";
     }
 }
 
@@ -1006,6 +1027,26 @@ sub pop_ctx {
     return pop @{ $self->{contexts} };
 }
 
+# Quck push of a single config hash to the context stack.
+sub push_config {
+    my $self = shift;
+    my $ctx_config;
+
+    if ( @_ == 1 ) {
+        $ctx_config = shift;
+    }
+    else {
+        my %c = @_;
+        $ctx_config = \%c;
+    }
+
+    die "push_config is expecting a hash variable => value pairs, not a "
+      . ( ref($ctx_config) || 'scalar' )
+      unless ref($ctx_config) eq 'HASH';
+
+    return $self->push_ctx( { configs => [$ctx_config], } );
+}
+
 sub set_key {
     my $self = shift;
     my ( $key, $val, %params ) = @_;
@@ -1111,12 +1152,10 @@ sub shell_quote_filename {
     my $self     = shift;
     my $filename = shift;
 
-    return $filename unless $filename =~ /\s/;
-
     my $platform = $self->cfg('platform');
 
     my $qchar = $self->cfg('quote');
-    my $out = $filename;
+    my $out   = $filename;
 
     if ( $platform eq 'windows' ) {
         $filename =~ s{(["%])}{$1$1}g;
@@ -1140,7 +1179,7 @@ sub nfp {
             File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
         )
     );
-    $filename = $self->shell_quote_filename($filename) unless $params{no_quote};
+    $filename = $self->shell_quote_filename($filename) if $params{quote};
     return $filename;
 }
 
@@ -1200,6 +1239,18 @@ sub system_or_die {
     my @cmd = @_;
     system(@cmd) == 0
       or die "Command failed (status $?): @cmd\n";
+}
+
+# qx{} replacement.
+sub run_or_die {
+    my ( $cmd, %params ) = @_;
+    my $buf;
+    my $ok = run( command => $cmd, %params, buffer => \$buf );
+    unless ($ok) {
+        my $cmdstr = ref($cmd) eq 'ARRAY' ? join( " ", @$cmd ) : $cmd;
+        die "Command failed (status $?): $cmdstr\n";
+    }
+    return $buf;
 }
 
 sub parse_revision {

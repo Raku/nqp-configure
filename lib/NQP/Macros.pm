@@ -84,7 +84,7 @@ use IPC::Cmd qw<can_run run>;
 require NQP::Config;
 
 my %preexpand = map { $_ => 1 } qw<
-  include include_capture nfp nfpl
+  include include_capture nfp nfpl nfpq nfplq q
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
   sp_escape nl_escape fixup uc lc abs2rel
@@ -252,7 +252,7 @@ sub _expand {
                                      (?2)
                                    | [^\)]
                                    | \) (?! \k<msym> )
-                                   | \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro '$+{macro_func}' after $+{text}" ) })
+                                   | (?(?{ $+{msym} eq '@' }) \z (?{ die "Can't find closing \)$+{msym} for macro '$+{macro_func}' after $+{text}" }))
                                  )*
                                )
                              \) 
@@ -573,7 +573,7 @@ sub _m_insert_filelist {
 sub _m_sp_escape {
     my $self = shift;
     my $str  = shift;
-    $str =~ s{ }{\\ }g;
+    $str =~ s{(\s)}{\\$1}g;
     $str;
 }
 
@@ -591,7 +591,7 @@ sub _m_nl_escape {
 sub _m_unescape {
     my $self = shift;
     my $str  = shift;
-    $str =~ s/\\(.)/$1/g;
+    $str =~ s/\\(\s)/$1/g;
     return $str;
 }
 
@@ -622,7 +622,12 @@ sub _iterate_ws_list {
 sub _m_nfpl {
     my $self = shift;
     my $cfg  = $self->cfg;
-    return $self->_iterate_ws_list( sub { $cfg->nfp( $_[0] ); }, shift );
+    return $self->_iterate_ws_list(
+        sub {
+            $cfg->nfp( $_[0] );
+        },
+        shift
+    );
 }
 
 # nfp(dir/file)
@@ -633,10 +638,32 @@ sub _m_nfp {
     return $self->cfg->nfp(shift);
 }
 
+sub _m_nfplq {
+    my $self = shift;
+    my $cfg  = $self->cfg;
+    return $self->_iterate_ws_list(
+        sub {
+            $cfg->nfp( $_[0], quote => 1 );
+        },
+        shift
+    );
+}
+
+sub _m_nfpq {
+    my $self = shift;
+    return $self->cfg->nfp( shift, quote => 1 );
+}
+
 # shquot(dir1/file1)
 sub _m_shquot {
     my $self = shift;
     return $self->cfg->shell_quote_filename(shift);
+}
+
+sub _m_q {
+    my $self = shift;
+    my $q    = $self->cfg->cfg('quote');
+    return $q . shift . $q;
 }
 
 # abs2rel(file1 file2)
@@ -680,6 +707,20 @@ sub _m_envvar {
     my $eclose = $cfg->cfg('env_close');
 
     return $self->_iterate_ws_list( sub { "${eopen}$_[0]${eclose}" }, shift );
+}
+
+sub _m_perl {
+    my $self = shift;
+    my $code = shift;
+    my $sub  = eval <<CODE;
+sub {
+    my \$macros = shift;
+    my \$cfg = \$macros->cfg;
+    my \$config = \$cfg->config;
+    $code
+}
+CODE
+    return $sub->($self);
 }
 
 # varinfo(var1 var2 ...)
