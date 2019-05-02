@@ -3,15 +3,57 @@
 NQP::Config expands template files using a pretty simple macro expansion. A
 macro is:
 
-* enclosed in symbols `@` or `@@`
+* enclosed in symbols `@` or `@@` (unless escaped with `\`)
 * has a name which a combination of word chars (`\w` in regexp terms) and colons
   `:` 
 * can be either a configuration variable or a macro function
 
-In this document we will call macro functions just _macro_s in this document.
+In this document we will call macro functions just _macro_s in this document
+unless otherwise is stated explicitly.
 
-For macros and variables defined with `@@` all spaces in their resulting value
-will be quoted with backslash char (`\`).
+For macros and variables defined with `@@` all horizontal whitespaces in their
+resulting value will be quoted with backslash char (`\`).
+
+## Escaping
+
+If accidentally some text in a template forms a macro-like sequence (by *macro*
+we mean both config variables and macro functions here) then it is possible to
+avoid it to be treated so by escaping `@` symbol with `\`. The latter could be
+duplicated to avoid be inserted as is. For example, parsing of the following
+template will fail as there is no `text` macro:
+
+```
+The following @text(?)@ looks like a macro
+```
+
+But this text will expand to the above example:
+
+```
+The following \@text(?)@ looks like a macro
+```
+
+Similarly, if we need the `\` before `@` then we write it like:
+
+
+```
+The following \\\@text(?)@ looks like a macro
+```
+
+The escaping is not needed if `\` is located before any other character or if
+`@` doesn't fall into a macro-like construct:
+
+```
+This \text would rem@in unchanged.
+```
+
+Note though that a macro function is detected by its opening brace, thus
+template
+
+```
+We fail with @this(example
+```
+
+will cause a failure of closing `)@` not found.
 
 ## Configuration Variables
 
@@ -117,8 +159,8 @@ unexpanded text. See the example with `@!nfp()` above.
 
 _Pre-expanded_
 
-Escapes spaces in the parameter with `\`. This is the macro used when parser
-encounters a `@@` macro call.
+Escapes horisontal whitespaces in the parameter with `\`. This is the macro used
+when parser encounters a `@@` macro call.
 
 ### nl_escape(text)
 
@@ -126,7 +168,7 @@ _Pre-expanded_
 
 Escapes newlines in the parameter with `\`.
 
-### unescape(text)
+### sp_unescape(text)
 
 Very simple unescaping. Replaces all `\<char>` sequences with `<char>`.
 

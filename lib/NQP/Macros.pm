@@ -117,8 +117,8 @@ sub register_macro {
     my $self = shift;
     my ( $name, $sub, %params ) = @_;
 
-    die "Bad macro name '$name'" unless $name && $name =~ /^\w+$/;
-    die "Macro sub isn't a code ref" unless ref($sub) eq 'CODE';
+    $self->throw( "Bad macro name '$name'" ) unless $name && $name =~ /^\w+$/;
+    $self->throw( "Macro sub isn't a code ref" ) unless ref($sub) eq 'CODE';
 
     $external{$name}  = $sub;
     $preexpand{$name} = !!$params{preexpand};
@@ -237,54 +237,67 @@ sub _expand {
     my $text_out = "";
 
     # @mfunc()@ @!mfunc()@
+    PARSE:
     while (
-        $text =~ /
-                 (?<text>.*? (?= @ | \z))
-                 (
-                     (?<msym> (?: @@ | @))
-                     (?:
-                         (?<macro_var> \w [:\w]* )
-                       | (?: (?<mfunc_noexp>!)? (?<macro_func> \w [:\w]* )
-                           (?>
-                             \( 
-                               (?<mparam>
-                                 (
-                                     (?2)
-                                   | [^\)]
-                                   | \) (?! \k<msym> )
-                                   | (?(?{ $+{msym} eq '@' }) \z (?{ die "Can't find closing \)$+{msym} for macro '$+{macro_func}' after $+{text}" }))
-                                 )*
-                               )
-                             \) 
-                           )
-                       )
-                       | \z
-                     )
-                     \k<msym>
-                 )?
+        $text =~ / 
+                    (?<eol> \z )
+                  | (?<macro>
+                        (?<msym> (?: @@ | @))
+                        (?:
+                            (?<macro_var> \w [:\w]* )
+                          | (?: (?<mfunc_noexp>!)? (?<macro_func> \w [:\w]* )
+                              (?>
+                                \(
+                                  (?<mparam>
+                                    (
+                                        (?2)
+                                      | [^\)]
+                                      | \) (?! \k<msym> )
+                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro $+{macro_func} after «$+{text}»" ) }))
+                                    )*
+                                  )
+                                \)
+                              )
+                            )
+                          | \z
+                        )
+                        \k<msym>
+                    )
+                    | (?<esc> \\ (?<eschr> [\\@] ) )
+                    | (?<plain> .*? (?= [\\@] | \z ) )
                 /sgcx
       )
     {
         my %m = %+;
-        $text_out .= $m{text} // "";
-        my $chunk;
-        if ( $m{macro_var} ) {
-            $chunk = $cfg->cfg( $m{macro_var} ) // '';
-
-            #$self->throw( "No configuration variable '$m{macro_var}' found" )
-            #  unless defined $chunk;
+        if (defined $m{plain}) {
+            $text_out .= $m{plain};
         }
-        elsif ( $m{macro_func} ) {
-            my %params;
-            $params{no_preexapnd} = !!$m{mfunc_noexp};
-            $chunk = $mobj->execute( $m{macro_func}, $m{mparam}, %params );
+        elsif (defined $m{esc}) {
+            $text_out .= $m{eschr};
         }
+        elsif (defined $m{macro}) {
+            my $chunk;
+            if ( $m{macro_var} ) {
+                $chunk = $cfg->cfg( $m{macro_var} ) // '';
+            }
+            elsif ( $m{macro_func} ) {
+                my %params;
+                $params{no_preexapnd} = !!$m{mfunc_noexp};
+                $chunk = $mobj->execute( $m{macro_func}, $m{mparam}, %params );
+            }
 
-        if ( defined $chunk ) {
-            $text_out .=
-                $m{msym} eq '@@'
-              ? $mobj->_m_sp_escape($chunk)
-              : $chunk;
+            if ( defined $chunk ) {
+                $text_out .=
+                    $m{msym} eq '@@'
+                  ? $mobj->_m_sp_escape($chunk)
+                  : $chunk;
+            }
+        }
+        elsif (defined $m{eol}) { 
+            last PARSE;
+        }
+        else {
+            $self->throw("Impossible but can't parse input");
         }
     }
 
@@ -343,7 +356,7 @@ sub include {
         $tmpl_params{$p} = $params{$p} if $params{$p};
     }
 
-    for my $file ( map { $self->_m_unescape($_) } @filenames ) {
+    for my $file ( map { $self->_m_sp_unescape($_) } @filenames ) {
         next unless $file;
         $file = $cfg->template_file_path( $file, required => 1, %tmpl_params );
         my $ctx = $cfg->cur_ctx;
@@ -573,7 +586,7 @@ sub _m_insert_filelist {
 sub _m_sp_escape {
     my $self = shift;
     my $str  = shift;
-    $str =~ s{(\s)}{\\$1}g;
+    $str =~ s{([\\\h])}{\\$1}g;
     $str;
 }
 
@@ -586,12 +599,12 @@ sub _m_nl_escape {
     $str;
 }
 
-# unescape(a\ st\ring)
-# Simlpe unescaping from backslashes. Replaces any \<char> sequence with <char>
-sub _m_unescape {
+# sp_unescape(a\ st\ring)
+# Simlpe unescaping horizontal whitespaces from backslashes.
+sub _m_sp_unescape {
     my $self = shift;
     my $str  = shift;
-    $str =~ s/\\(\s)/$1/g;
+    $str =~ s/\\([\\\h])/$1/g;
     return $str;
 }
 
@@ -607,7 +620,7 @@ sub _iterate_ws_list {
     while (@elems) {
         my ( $file, $ws ) = ( shift @elems, shift @elems );
         if ($file) {    # If text starts with spaces $file will be empty
-            $file = $self->_m_unescape($file);
+            $file = $self->_m_sp_unescape($file);
             $file = $cb->($file);
         }
         $out .= $file . ( $ws // "" );
@@ -717,7 +730,9 @@ sub {
     my \$macros = shift;
     my \$cfg = \$macros->cfg;
     my \$config = \$cfg->config;
+    my \$out = "";
     $code
+    return \$out;
 }
 CODE
     return $sub->($self);
