@@ -88,7 +88,7 @@ my %preexpand = map { $_ => 1 } qw<
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
   sp_escape nl_escape fixup uc lc abs2rel
-  shquot
+  shquot mkquot
 >;
 
 # Hash of externally registered macros.
@@ -289,7 +289,7 @@ sub _expand {
             if ( defined $chunk ) {
                 $text_out .=
                     $m{msym} eq '@@'
-                  ? $mobj->_m_sp_escape($chunk)
+                  ? $mobj->_m_mkquot($chunk)
                   : $chunk;
             }
         }
@@ -667,10 +667,30 @@ sub _m_nfpq {
     return $self->cfg->nfp( shift, quote => 1 );
 }
 
-# shquot(dir1/file1)
+# shquot(text)
+# Escaping and quoting for shell command line.
 sub _m_shquot {
     my $self = shift;
     return $self->cfg->shell_quote_filename(shift);
+}
+
+# mkquot(text)
+# Escaping for current make utility
+sub _m_mkquot {
+    my $self = shift;
+    my $text = shift;
+    my $family = $self->cfg->cfg('make_family');
+    my $out;
+    if ($family eq 'gnu') {
+        $out = $self->_m_sp_escape($text);
+    }
+    elsif ($family eq 'nmake') {
+        $out = qq<"$text"> unless $text =~ /^".*"$/;
+    }
+    else {
+        $self->throw("Don't know how to escape for $family make utility");
+    }
+    return $out;
 }
 
 sub _m_q {

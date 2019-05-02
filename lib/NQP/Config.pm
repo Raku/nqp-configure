@@ -198,6 +198,7 @@ sub make_cmd {
             $make = $_;
         }
         elsif ( $has_nmake && $has_cl ) {
+            $config->{make_family} = 'nmake';
             $make = 'nmake';
         }
         elsif ( $has_gmake && $has_gcc ) {
@@ -434,6 +435,17 @@ sub configure_commands {
     my $config = $self->{config};
 
     $config->{make} = $self->make_cmd;
+
+    # make_cmd would set make_family for nmake
+    unless ($config->{make_family}) { 
+        my $buf = run_or_die( [$config->{make}, "-v"] );
+        if ($buf =~ /^GNU Make/s) {
+            $config->{make_family} = 'gnu';
+        }
+        else {
+            $self->sorry( "Cannot determine the brand of your $config->{make} utility." );
+        }
+    }
 
     if ( $self->isa_unix ) {
         $config->{mkpath} = 'mkdir -p --';
