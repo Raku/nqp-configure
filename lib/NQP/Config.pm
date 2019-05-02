@@ -1158,7 +1158,8 @@ sub shell_quote_filename {
     my $out   = $filename;
 
     if ( $platform eq 'windows' ) {
-        $filename =~ s{(["%])}{$1$1}g;
+        $filename =~ s{(%)}{$1$1}g;
+        $filename =~ s{(")}{\\$1}g;
     }
     elsif ( $platform eq 'unix' ) {
         $filename =~ s{'}{'\\''}g;
