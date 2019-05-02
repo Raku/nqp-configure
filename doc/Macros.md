@@ -224,15 +224,12 @@ like `src/Perl6/Actions.nqp src/Perl6/PodActions.nqp`.
 
 _Pre-expanded_
 
-Quotes path if necessary by using rules valid for the shell of the current
-platform. This is what `nfp` does but without mangling with the slashes. In
-other words, this macro expects the path to be already valid for the current
-platform. This could be guaranted, for example, if the path was obtained with
-`script` or `template` macros:
+Quotes path by using rules valid for the shell of the current
+platform. 
 
 ```
 target: $(DEPS)
-    $(PERL5) @shquot(@script(myscript.pl)@)@
+    $(PERL5) @shquot(@script(myscript.pl)@)@ --option=@shquot(I'm ok)@
 ```
 
 ### abs2rel(file1 file2 ...)
@@ -291,17 +288,21 @@ context defines `ctx_subdir` variable then this subdirectory within the
 templates directory is checked first. Then if no file is found the macro falls
 back to the default `@templates_dir@`. 
 
-Usually, the template name is assumed to be ending with `.in` extension
-(`Makefile.in`). When looking for the file, macro first checks for exact name is
-passed in the parameter. If not found then `.in` is appended and checked again.
+It is a good practice to have template's filename to end with `.in` extension.
+But the actual order of filenames tried check for this extension last. First the
+exact name as it is passed in is checked, then `.@platform@` is tried (which
+would be `.windows`, or `.unix`, or `.vms`, or whatever the current platform
+is), and only then `.in` extension is tried.
 
 For example, within the context of `@for_backends()@` macro
 `@include(Makefile)@` would check the following directories in the order:
 
 1. `@templates_dir@/moar/Makefile` (which is actually
    `@templates_dir@/@ctx_subdir@/Makefile`)
+1. `@templates_dir@/@ctx_subdir@/Makefile.@platform@`
 1. `@templates_dir@/moar/Makefile.in`
 1. `@templates_dir@/Makefile`
+1. `@templates_dir@/Makefile.@platform@`
 1. `@templates_dir@/Makefile.in`
 
 Circular dependency is a fatal condition.
