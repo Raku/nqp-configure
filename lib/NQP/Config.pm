@@ -876,7 +876,8 @@ sub fill_template_text {
     my $config = $self->config;
 
     my $on_fail = sub {
-        my $msg = shift;
+        my $err = shift;
+        my $msg = ref($err) && $err->isa('NQP::Macros::_Err') ? $err->message : $err;
         my $src = $params{source} ? " in template $params{source}" : "";
         $self->sorry("$msg$src");
     };

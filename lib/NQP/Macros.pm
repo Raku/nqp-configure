@@ -30,6 +30,10 @@ sub throw {
         }
         $self = $self->new(@_);
     }
+    else {
+        my %params = @_;
+        @{$self}{keys %params} = values %params;
+    }
 
     die $self;
 }
@@ -117,8 +121,8 @@ sub register_macro {
     my $self = shift;
     my ( $name, $sub, %params ) = @_;
 
-    $self->throw( "Bad macro name '$name'" ) unless $name && $name =~ /^\w+$/;
-    $self->throw( "Macro sub isn't a code ref" ) unless ref($sub) eq 'CODE';
+    $self->throw("Bad macro name '$name'") unless $name && $name =~ /^\w+$/;
+    $self->throw("Macro sub isn't a code ref") unless ref($sub) eq 'CODE';
 
     $external{$name}  = $sub;
     $preexpand{$name} = !!$params{preexpand};
@@ -130,16 +134,16 @@ sub fail {
     my $self = shift;
     my $err  = shift;
 
+    if ( ref( $self->{on_fail} ) eq 'CODE' ) {
+        $self->{on_fail}->($err);
+    }
+
     my $msg;
     if ( ref($err) && $err->isa('NQP::Macros::_Err') ) {
         $msg = $err->message;
     }
     else {
         $msg = $err;
-    }
-
-    if ( ref( $self->{on_fail} ) eq 'CODE' ) {
-        $self->{on_fail}->($msg);
     }
 
     die $msg;
@@ -149,7 +153,7 @@ sub throw {
     my $self = shift;
     my $err  = shift;
     if ( ref($err) && $err->isa('NQP::Macros::_Err') ) {
-        $err->throw;
+        $err->throw(@_);
     }
     NQP::Macros::_Err->throw(
         $err,
@@ -237,7 +241,7 @@ sub _expand {
     my $text_out = "";
 
     # @mfunc()@ @!mfunc()@
-    PARSE:
+  PARSE:
     while (
         $text =~ / 
                     (?<eol> \z )
@@ -245,7 +249,12 @@ sub _expand {
                         (?<msym> (?: @@ | @))
                         (?:
                             (?<macro_var> \w [:\w]* )
-                          | (?: (?<mfunc_noexp>!)? (?<macro_func> \w [:\w]* )
+                          | (?: 
+                              (?: 
+                                  (?<mfunc_noexp> ! )
+                                | (?<mfunc_if_can> \? )
+                              )* 
+                              (?<macro_func> \w [:\w]* )
                               (?>
                                 \(
                                   (?<mparam>
@@ -269,13 +278,13 @@ sub _expand {
       )
     {
         my %m = %+;
-        if (defined $m{plain}) {
+        if ( defined $m{plain} ) {
             $text_out .= $m{plain};
         }
-        elsif (defined $m{esc}) {
+        elsif ( defined $m{esc} ) {
             $text_out .= $m{eschr};
         }
-        elsif (defined $m{macro}) {
+        elsif ( defined $m{macro} ) {
             my $chunk;
             if ( $m{macro_var} ) {
                 $chunk = $cfg->cfg( $m{macro_var} ) // '';
@@ -283,7 +292,18 @@ sub _expand {
             elsif ( $m{macro_func} ) {
                 my %params;
                 $params{no_preexapnd} = !!$m{mfunc_noexp};
-                $chunk = $mobj->execute( $m{macro_func}, $m{mparam}, %params );
+                eval {
+                    $chunk =
+                      $mobj->execute( $m{macro_func}, $m{mparam}, %params );
+                };
+                if ($@) {
+                    $self->throw( $@, force => 1 )
+                      if !$m{mfunc_if_can}
+                      || ( ref($@)
+                        && $@->isa('NQP::Macros::_Err')
+                        && $@->{force} );
+                    $chunk = '';
+                }
             }
 
             if ( defined $chunk ) {
@@ -293,7 +313,7 @@ sub _expand {
                   : $chunk;
             }
         }
-        elsif (defined $m{eol}) { 
+        elsif ( defined $m{eol} ) {
             last PARSE;
         }
         else {
@@ -677,14 +697,14 @@ sub _m_shquot {
 # mkquot(text)
 # Escaping for current make utility
 sub _m_mkquot {
-    my $self = shift;
-    my $text = shift;
+    my $self   = shift;
+    my $text   = shift;
     my $family = $self->cfg->cfg('make_family');
     my $out;
-    if ($family eq 'gnu') {
+    if ( $family eq 'gnu' ) {
         $out = $self->_m_sp_escape($text);
     }
-    elsif ($family eq 'nmake') {
+    elsif ( $family eq 'nmake' ) {
         $out = qq<"$text"> unless $text =~ /^".*"$/;
     }
     else {

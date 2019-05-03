@@ -7,12 +7,13 @@ use Test::More;
 use v5.12;
 
 my $config     = NQP::Config::Test->new;
+$config->configure_paths;
 my $slash      = $config->cfg('slash');
 my $qchar      = $config->cfg('quote');
 my $platform   = $config->cfg('platform');
 my $ucplatform = uc $platform;
 
-my $macros = NQP::Macros->new( config => $config );
+my $macros = NQP::Macros->new( config => $config, on_fail => sub { die shift } );
 
 sub expands {
     my ( $snippet, $expected, $name ) = @_;
@@ -38,15 +39,17 @@ expands q<@lc(Line \@sp_escape(with spaces)@)@>,
 expands q<This \text would rem@in unchanged>,
   q<This \text would rem@in unchanged>, 'No escaping when not needed';
 
-expands <<'EOT', <<RESULT, 'Multiline';
-Platform @platform@
-
-@uc(pLatform @platform@)@
-EOT
+my $result = <<RESULT;
 Platform $platform
 
 PLATFORM $ucplatform
 RESULT
+
+expands <<'EOT', $result, 'Multiline';
+Platform @platform@
+
+@uc(pLatform @platform@)@
+EOT
 
 expands "\@uc(foO BaR)\@", "FOO BAR";
 expands "\@lc(foO BaR)\@", "foo bar";
@@ -56,5 +59,31 @@ expands q<@nfpq(/A Path/With/Spaces)@>,
 
 expands q<@nfp(/A Path/With/Spaces)@>,
   qq<${slash}A Path${slash}With${slash}Spaces>;
+
+eval {
+    expands q<@include(no-file)@>, "";
+};
+if ($@) {
+    isa_ok $@, 'NQP::Macros::_Err', "got the exception";
+    like $@->message, qr/File 'no-file' not found in base directory/, "exception message ok";
+}
+else {
+    fail "macro is expected to throw";
+}
+
+expands q<@?include(no-file)@>, "", "ignore macro error returns empty string";
+
+eval {
+    expands q<@?include(@include(failed-nested-include)@)@>, "";
+};
+if ($@) {
+    isa_ok $@, 'NQP::Macros::_Err', "got the exception from a nested macro";
+    like $@->message, qr/File 'failed-nested-include' not found in base directory/, "exception message from nested macro ok";
+}
+else {
+    fail "macro is expected to throw";
+}
+
+expands q<@?include(@?include(failed-nested-include)@)@>, "", "nested ignore";
 
 done_testing;
