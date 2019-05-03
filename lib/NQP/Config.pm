@@ -76,6 +76,10 @@ my %platform_vars = (
         windows => q<">,
         default => q<'>,
     },
+    shebang => {
+        windows => qq<\n>,
+        default => qq<#!/bin/sh\n>,
+    },
 );
 
 sub new {
