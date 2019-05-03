@@ -32,7 +32,7 @@ sub throw {
     }
     else {
         my %params = @_;
-        @{$self}{keys %params} = values %params;
+        @{$self}{ keys %params } = values %params;
     }
 
     die $self;
@@ -760,6 +760,24 @@ sub _m_envvar {
     my $eclose = $cfg->cfg('env_close');
 
     return $self->_iterate_ws_list( sub { "${eopen}$_[0]${eclose}" }, shift );
+}
+
+# setenv(VAR)
+# Generates variable assignment construct valid for the current platform.
+sub _m_setenv {
+    my $self = shift;
+    my $var  = shift;
+
+    my $p = $self->cfg->cfg('platform');
+
+    my $out = "";
+    if ( $p eq 'windows' ) {
+        $out = "@ SET $var=";
+    }
+    else {
+        $out = "$var=";
+    }
+    $out;
 }
 
 sub _m_perl {
