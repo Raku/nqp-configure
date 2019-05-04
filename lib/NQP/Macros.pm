@@ -780,6 +780,25 @@ sub _m_setenv {
     $out;
 }
 
+# exec(cmd)
+# Generates exec call for current platform. '@ cmd' for Windows, 'exec cmd' by
+# default.
+sub _m_exec {
+    my $self = shift;
+    my $cmd = shift;
+
+    my $p = $self->cfg->cfg('platform');
+
+    my $out = "";
+    if ( $p eq 'windows' ) {
+        $out = "@ $cmd";
+    }
+    else {
+        $out = "exec $cmd";
+    }
+    $out;
+}
+
 sub _m_perl {
     my $self = shift;
     my $code = shift;
