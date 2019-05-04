@@ -398,7 +398,48 @@ newlines). Each file name in the list will be normalized (i.e. passed through
 * per line, newlines escaped with `\`
 * all lines, except the first one, indented with four spaces (unless
   configuration variable `filelist_indent` specifies another amount)
+
+### perl(code)
+
+This macro executes a Perl code snippet and returns either what the snipped
+returned explicitly or what it's left in `$out`:
+
+```
+@perl(
+for (1..4) { $out .= "line$_\n" }
+)@
+```
+
+For ease of use, the following variables are pre-declared:
+
+- `$macros` – object of class `NQP::Macros` which does expansions of the current template.
+- `$cfg` - object of type `NQP::Config`.
+- `%config` – hash of configuration variables. Incorporates all surrounding
+  contexts.
+- `$out` – content of this variable will be returned as macro result unless the
+  snippet returns something explicitly.
  
+### nop(text)
+
+Does nothing, returns the parameter text as is. Can be used as an escape macro
+in cases like the following:
+
+```
+@q(@nop($(VAR1))@@cpsep@$(VAR2))@
+```
+
+where without `@nop()@` the closing brace of `$(VAR1)` would combine with
+opening `@` and form fake closing brace for `@q(`:
+
+```
+@q($(VAR1)@cpsep@$(VAR2))@
+```
+
+Would result in:
+
+```
+'$(VAR1'cpsep@$(VAR2))@
+```
 
 ## Configuration variables
 

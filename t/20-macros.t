@@ -86,4 +86,15 @@ else {
 
 expands q<@?include(@?include(failed-nested-include)@)@>, "", "nested ignore";
 
+eval {
+    expands q<Text with @nop(some macros)@ to prepend @?include(@?nclude(failed-nested-include))@>, "";
+};
+if ($@) {
+    isa_ok $@, 'NQP::Macros::_Err', "exception type";
+    like $@->message, qr<\QCan't find closing )@ for macro 'include' following «\E\@\Qnop(some macros)@ to prepend »\E>, "error message on unclosed )@"
+}
+else {
+    fail "expected exception due to unclosed macro";
+}
+
 done_testing;

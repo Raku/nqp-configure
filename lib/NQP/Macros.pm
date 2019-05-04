@@ -240,6 +240,8 @@ sub _expand {
 
     my $text_out = "";
 
+    my $last_text = "";
+
     # @mfunc()@ @!mfunc()@
   PARSE:
     while (
@@ -262,7 +264,7 @@ sub _expand {
                                         (?2)
                                       | [^\)]
                                       | \) (?! \k<msym> )
-                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro $+{macro_func} after «$+{text}»" ) }))
+                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro '$+{macro_func}' following «" . $last_text . "»" ) }))
                                     )*
                                   )
                                 \)
@@ -274,9 +276,10 @@ sub _expand {
                     )
                     | (?<esc> \\ (?<eschr> [\\@] ) )
                     | (?<plain> .*? (?= [\\@] | \z ) )
-                /sgcx
+                /sgcxp
       )
     {
+        $last_text = substr( $last_text . ${^MATCH}, -30 );
         my %m = %+;
         if ( defined $m{plain} ) {
             $text_out .= $m{plain};
@@ -799,6 +802,15 @@ sub _m_exec {
     $out;
 }
 
+# nop(text)
+# Returns the text as-is
+sub _m_nop {
+    return $_[1];
+}
+
+# perl(code)
+# Executes a Perl code snippet and returns what the snipped returned or what
+# it's left in $out variable.
 sub _m_perl {
     my $self = shift;
     my $code = shift;
@@ -806,12 +818,13 @@ sub _m_perl {
 sub {
     my \$macros = shift;
     my \$cfg = \$macros->cfg;
-    my \$config = \$cfg->config;
+    my \%config = %{ \$cfg->config };
     my \$out = "";
     $code
     return \$out;
 }
 CODE
+    $self->throw($@) if $@;
     return $sub->($self);
 }
 
