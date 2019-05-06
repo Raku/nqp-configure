@@ -92,7 +92,7 @@ my %preexpand = map { $_ => 1 } qw<
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
   sp_escape nl_escape fixup uc lc abs2rel
-  shquot mkquot
+  shquot mkquot chomp
 >;
 
 # Hash of externally registered macros.
@@ -800,6 +800,15 @@ sub _m_exec {
         $out = "exec $cmd";
     }
     $out;
+}
+
+# chomp(text)
+# See perlfunc for chomp
+sub _m_chomp {
+    my $self = shift;
+    my $text = shift;
+    chomp($text);
+    return $text;
 }
 
 # nop(text)

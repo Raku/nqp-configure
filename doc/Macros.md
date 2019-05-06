@@ -148,6 +148,12 @@ we can say that the Makefile is included in a backend context.
 
 For simplicity, macros in this section are not enclosed with `@`.
 
+### chomp(text)
+
+_Pre-expand_
+
+See Perl 5 `chomp` function.
+
 ### expand(text)
 
 _Pre-expanded_
