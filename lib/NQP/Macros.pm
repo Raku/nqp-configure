@@ -817,6 +817,13 @@ sub _m_nop {
     return $_[1];
 }
 
+# @configure_opts()@
+# Returns options to be passed to Configure.pl
+sub _m_configure_opts {
+    my $self = shift;
+    return $self->cfg->opts_for_configure;
+}
+
 # perl(code)
 # Executes a Perl code snippet and returns what the snipped returned or what
 # it's left in $out variable.

@@ -405,6 +405,10 @@ newlines). Each file name in the list will be normalized (i.e. passed through
 * all lines, except the first one, indented with four spaces (unless
   configuration variable `filelist_indent` specifies another amount)
 
+### configure_opts()
+
+Returns command line options for Configure.pl. Any input is ignored.
+
 ### perl(code)
 
 This macro executes a Perl code snippet and returns either what the snipped

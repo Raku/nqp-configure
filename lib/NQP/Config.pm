@@ -571,16 +571,6 @@ sub configure_from_options {
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
-    my @subopts;
-
-    # ignorable_opt must be defined by lang-specific child class.
-    for
-      my $opt ( grep { !$self->ignorable_opt($_) } keys %{ $self->{options} } )
-    {
-        push @subopts, qq{--$opt="$self->{options}{$opt}"};
-    }
-    $config->{configure_opts} = join( " ", @subopts );
-
     my ( $template, $out );
     if ( $self->option('expand') ) {
         $self->mute;
@@ -654,6 +644,21 @@ sub save_config_status {
     else {
         warn "Can't write to $status_file: $!";
     }
+}
+
+# Generate Configure.pl options from the data we have so far.
+sub opts_for_configure {
+    my $self = shift;
+    my @subopts;
+
+    # ignorable_opt must be defined by lang-specific child class.
+    for
+      my $opt ( grep { !$self->ignorable_opt($_) } keys %{ $self->{options} } )
+    {
+        push @subopts, qq{--$opt="$self->{options}{$opt}"};
+    }
+    push @subopts, "--backends=" . join(",", $self->active_backends);
+    return join( " ", @subopts );
 }
 
 sub is_win {
