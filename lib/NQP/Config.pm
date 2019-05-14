@@ -404,6 +404,7 @@ sub configure_jars {
 
     $config->{asmfile}   = ( File::Spec->splitpath( $config->{asm} ) )[-1];
     $config->{jlinefile} = ( File::Spec->splitpath( $config->{jline} ) )[-1];
+    $config->{jnafile}   = ( File::Spec->splitpath( $config->{jna} ) )[-1];
 }
 
 sub configure_relocatability {
