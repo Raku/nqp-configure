@@ -704,7 +704,7 @@ sub _m_mkquot {
     my $text   = shift;
     my $family = $self->cfg->cfg('make_family');
     my $out;
-    if ( $family eq 'gnu' ) {
+    if ( $family =~ /^(?:gnu|bsd)$/ ) {
         $out = $self->_m_sp_escape($text);
     }
     elsif ( $family eq 'nmake' ) {

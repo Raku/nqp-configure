@@ -190,6 +190,13 @@ sub make_cmd {
         $make = 'gmake';
     }
 
+    if ( $self->is_bsd ) {
+        $make = can_run('gmake');
+        unless ($make) {
+            $make = 'make';
+        }
+    }
+
     if ( $self->is_win ) {
         my $prefix    = $config->{prefix};
         my $has_nmake = 0 == system('nmake /? >NUL 2>&1');
@@ -454,6 +461,9 @@ sub configure_commands {
     elsif ( $buf =~ /Microsoft .* NMAKE/s ) {
         $config->{make_family} = 'nmake';
     }
+    elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
+        $config->{make_family} = 'bsd';
+    }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
             "Cannot determine the brand of your $config->{make} utility.");
@@ -669,6 +679,11 @@ sub is_win {
 sub is_solaris {
     state $solaris = $^O eq 'solaris';
     return $solaris;
+}
+
+sub is_bsd {
+    state $bsd = $^O =~ /bsd/;
+    return $bsd;
 }
 
 sub isa_unix {
