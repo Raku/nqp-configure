@@ -318,7 +318,7 @@ sub active_backend {
 
 sub active_abbrs {
     my $self = shift;
-    return map { $self->backend_abbr($_) } @{ $self->{active_backends_order} };
+    return map { $self->backend_abbr($_) } $self->active_backends;
 }
 
 # Takes a relative path
