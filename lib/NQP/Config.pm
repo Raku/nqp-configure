@@ -306,6 +306,7 @@ sub use_backend {
 
 sub active_backends {
     my $self = shift;
+    return () if !$self->{active_backends_order};
     return @{ $self->{active_backends_order} };
 }
 
