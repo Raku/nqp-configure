@@ -80,7 +80,7 @@ my %platform_vars = (
         windows => qq<\n>,
         default => qq<#!/bin/sh\n>,
     },
-    sh_allparams => { # All command line params
+    sh_allparams => {    # All command line params
         windows => q<%*>,
         default => q<$@>,
     },
@@ -306,6 +306,8 @@ sub use_backend {
 
 sub active_backends {
     my $self = shift;
+    $self->sorry("No active backends found. Please, report this bug!")
+      unless $self->{active_backends_order};
     return @{ $self->{active_backends_order} };
 }
 
@@ -668,7 +670,7 @@ sub opts_for_configure {
     {
         push @subopts, qq{--$opt="$self->{options}{$opt}"};
     }
-    push @subopts, "--backends=" . join(",", $self->active_backends);
+    push @subopts, "--backends=" . join( ",", $self->active_backends );
     return join( " ", @subopts );
 }
 
@@ -906,7 +908,8 @@ sub fill_template_text {
 
     my $on_fail = sub {
         my $err = shift;
-        my $msg = ref($err) && $err->isa('NQP::Macros::_Err') ? $err->message : $err;
+        my $msg =
+          ref($err) && $err->isa('NQP::Macros::_Err') ? $err->message : $err;
         my $src = $params{source} ? " in template $params{source}" : "";
         $self->sorry("$msg$src");
     };
