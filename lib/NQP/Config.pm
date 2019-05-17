@@ -193,6 +193,7 @@ sub make_cmd {
     if ( $self->is_bsd ) {
         $make = can_run('gmake');
         unless ($make) {
+            # TODO Make sure it is BSD make by trying BSDmakefile
             $make = 'make';
         }
     }
@@ -415,10 +416,10 @@ sub configure_relocatability {
     my $config = $self->{config};
 
     # Relocatability is not supported on AIX.
-    $config->{no_relocatable} ||= $^O eq 'aix';
+    $self->{no_relocatable} ||= $^O eq /^(?:aix|openbsd)$/;
     my $prefix = $config->{prefix};
 
-    if ( $config->{no_relocatable} ) {
+    if ( $self->{no_relocatable} ) {
         $config->{static_nqp_home} =
           File::Spec->catdir( $prefix, 'share', 'nqp' );
         $config->{static_perl6_home} =
@@ -659,19 +660,56 @@ sub save_config_status {
     }
 }
 
+sub make_option {
+    my $self = shift;
+    my $opt = shift;
+
+    my $options = $self->{options};
+
+    state $bool_opt = { map { $_ => 1 } 
+            qw<
+                no-relocatable no-clean ignore-errors
+            > 
+        };
+
+        my $opt_str = "";
+    if ($bool_opt->{$opt}) {
+        if ($options->{$opt}) {
+            $opt_str = "--$opt";
+        }
+    }
+    elsif (defined $options->{$opt}) {
+        $opt_str = qq{--$opt="$options->{$opt}"};
+    }
+    return $opt_str;
+}
+
+# Can be overriden by lang-specific module to modify the list.
+sub ignorable_opts {
+    my $self = shift;
+    my $opt  = shift;
+    return qw<gen-moar gen-nqp help make-install expand out backends set-var>;
+}
+
 # Generate Configure.pl options from the data we have so far.
 sub opts_for_configure {
     my $self = shift;
+    my @opts = @_;
     my @subopts;
 
-    # ignorable_opt must be defined by lang-specific child class.
+    @opts = keys %{ $self->{options} } unless @opts;
+
+    my @ignorables = $self->ignorable_opts;
+    my $ignorable_re = '^(?:' . join('|', map { "$_" } @ignorables) . ')$';
+
     for
-      my $opt ( grep { !$self->ignorable_opt($_) } keys %{ $self->{options} } )
+      my $opt ( grep { ! /$ignorable_re/ } @opts )
     {
-        push @subopts, qq{--$opt="$self->{options}{$opt}"};
+        my $opt_str = $self->make_option($opt);
+        push @subopts, $opt_str if $opt_str;
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
-    return join( " ", @subopts );
+    return wantarray ? @subopts : join( " ", @subopts );
 }
 
 sub is_win {
