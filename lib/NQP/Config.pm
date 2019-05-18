@@ -662,8 +662,9 @@ sub save_config_status {
 }
 
 sub make_option {
-    my $self = shift;
-    my $opt  = shift;
+    my $self   = shift;
+    my $opt    = shift;
+    my %params = @_;
 
     my $options = $self->{options};
 
@@ -681,7 +682,13 @@ sub make_option {
         }
     }
     elsif ( defined $options->{$opt} ) {
-        $opt_str = qq{--$opt="$options->{$opt}"};
+        if ( $params{no_quote} ) {
+            $opt_str = qq{--$opt=$options->{$opt}};
+        }
+        else {
+            $opt_str =
+              qq{--$opt=} . $self->shell_quote_filename( $options->{$opt} );
+        }
     }
     return $opt_str;
 }
