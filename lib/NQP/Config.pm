@@ -193,6 +193,7 @@ sub make_cmd {
     if ( $self->is_bsd ) {
         $make = can_run('gmake');
         unless ($make) {
+
             # TODO Make sure it is BSD make by trying BSDmakefile
             $make = 'make';
         }
@@ -416,7 +417,7 @@ sub configure_relocatability {
     my $config = $self->{config};
 
     # Relocatability is not supported on AIX.
-    $self->{no_relocatable} ||= $^O eq /^(?:aix|openbsd)$/;
+    $self->{no_relocatable} ||= !!( $^O =~ /^(?:aix|openbsd)$/ );
     my $prefix = $config->{prefix};
 
     if ( $self->{no_relocatable} ) {
@@ -662,23 +663,24 @@ sub save_config_status {
 
 sub make_option {
     my $self = shift;
-    my $opt = shift;
+    my $opt  = shift;
 
     my $options = $self->{options};
 
-    state $bool_opt = { map { $_ => 1 } 
-            qw<
-                no-relocatable no-clean ignore-errors
-            > 
-        };
+    state $bool_opt = {
+        map { $_ => 1 }
+          qw<
+          no-relocatable no-clean ignore-errors
+          >
+    };
 
-        my $opt_str = "";
-    if ($bool_opt->{$opt}) {
-        if ($options->{$opt}) {
+    my $opt_str = "";
+    if ( $bool_opt->{$opt} ) {
+        if ( $options->{$opt} ) {
             $opt_str = "--$opt";
         }
     }
-    elsif (defined $options->{$opt}) {
+    elsif ( defined $options->{$opt} ) {
         $opt_str = qq{--$opt="$options->{$opt}"};
     }
     return $opt_str;
@@ -699,12 +701,10 @@ sub opts_for_configure {
 
     @opts = keys %{ $self->{options} } unless @opts;
 
-    my @ignorables = $self->ignorable_opts;
-    my $ignorable_re = '^(?:' . join('|', map { "$_" } @ignorables) . ')$';
+    my @ignorables   = $self->ignorable_opts;
+    my $ignorable_re = '^(?:' . join( '|', map { "$_" } @ignorables ) . ')$';
 
-    for
-      my $opt ( grep { ! /$ignorable_re/ } @opts )
-    {
+    for my $opt ( grep { !/$ignorable_re/ } @opts ) {
         my $opt_str = $self->make_option($opt);
         push @subopts, $opt_str if $opt_str;
     }
