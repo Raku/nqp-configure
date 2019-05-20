@@ -91,7 +91,7 @@ my %preexpand = map { $_ => 1 } qw<
   include include_capture nfp nfpl nfpq nfplq q
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
-  sp_escape nl_escape fixup uc lc abs2rel
+  sp_escape nl_escape c_escape fixup uc lc abs2rel
   shquot mkquot chomp
 >;
 
@@ -620,6 +620,16 @@ sub _m_nl_escape {
     my $str  = shift;
     $str =~ s{(\n)}{\\$1}g;
     $str;
+}
+
+# c_escape(text)
+# Escaping for c string literals.
+sub _m_c_escape {
+    my $self = shift;
+    my $str = shift;
+    $str =~ s{\\}{\\\\}sg;
+    $str =~ s{"}{\\"}sg;
+    return $str;
 }
 
 # sp_unescape(a\ st\ring)
