@@ -682,12 +682,15 @@ sub make_option {
         }
     }
     elsif ( defined $options->{$opt} ) {
+        my $opt_value =
+          ref( $options->{$opt} )
+          ? join( ",", @{ $options->{$opt} } )
+          : $options->{$opt};
         if ( $params{no_quote} ) {
-            $opt_str = qq{--$opt=$options->{$opt}};
+            $opt_str = qq{--$opt=$opt_value};
         }
         else {
-            $opt_str =
-              qq{--$opt=} . $self->shell_quote_filename( $options->{$opt} );
+            $opt_str = qq{--$opt=} . $self->shell_quote_filename($opt_value);
         }
     }
     return $opt_str;
