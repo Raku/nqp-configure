@@ -2,6 +2,7 @@
 use v5.10.1;
 use strict;
 use warnings;
+use utf8;
 
 package NQP::Macros::_Err;
 use Scalar::Util qw<blessed>;
@@ -92,7 +93,7 @@ my %preexpand = map { $_ => 1 } qw<
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
   sp_escape nl_escape fixup uc lc abs2rel
-  shquot mkquot chomp
+  shquot mkquot chomp if
 >;
 
 # Hash of externally registered macros.
@@ -588,8 +589,7 @@ sub _m_fixup {
 }
 
 # insert_filelist(filename)
-# Inserts a list of files defined in file filename. File content is not
-# expanded.
+# Inserts a list of files defined in file filename. File content is  expanded.
 # All file names in the list will be indented by 4 spaces except for the first
 # one.
 sub _m_insert_filelist {
@@ -597,7 +597,7 @@ sub _m_insert_filelist {
     my $cfg    = $self->{config_obj};
     my $indent = " " x ( $cfg->{config}{filelist_indent} || 4 );
     my $file   = $cfg->template_file_path( shift, required => 1 );
-    my $text   = NQP::Config::slurp($file);
+    my $text   = $self->_expand( NQP::Config::slurp($file) );
     my @flist  = map { $cfg->nfp($_) } grep { $_ } split /\s+/s, $text;
     $text = join " \\\n$indent", @flist;
     return $text;
@@ -788,7 +788,7 @@ sub _m_setenv {
 # default.
 sub _m_exec {
     my $self = shift;
-    my $cmd = shift;
+    my $cmd  = shift;
 
     my $p = $self->cfg->cfg('platform');
 
@@ -842,6 +842,41 @@ sub {
 CODE
     $self->throw($@) if $@;
     return $sub->($self);
+}
+
+# if(var[(==|!=)value] text)
+# Inserts text if config variable is defined or compares to a value.
+sub _m_if {
+    my $self = shift;
+    my $text = shift;
+
+    my $out = "";
+    if ( $text =~ s/^(?<cond>\S+)\s+(.*)/$2/ ) {
+        my $cond    = $+{cond};
+        my $matches = 0;
+        if ( $cond =~ /^(?<var>\w(?:\w|:\w)*)(?:(?<op>[=\!]=)(?<val>.*))?$/ ) {
+            if ( $+{op} ) {
+                my $val = $+{val};
+                my $var = $+{var};
+                my $op  = $+{op} eq '==' ? 'eq' : 'ne';
+                $matches = eval "\$self->cfg->cfg(\$var) $op \$val";
+            }
+            else {
+                $matches = defined $self->cfg( $+{var} );
+            }
+        }
+        elsif ( $cond =~ /^!(?<var>\w(?:\w|:\w)*)$/ ) {
+            $matches = !defined $self->cfg->cfg( $+{var} );
+        }
+        else {
+            $self->throw("Malformed condition of macro 'if': '$cond'");
+        }
+        $out = $text if $matches;
+    }
+    else {
+        $self->throw("Invalid input of macro 'if': '$text'");
+    }
+    return $out;
 }
 
 # varinfo(var1 var2 ...)

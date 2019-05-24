@@ -934,6 +934,8 @@ sub fixup_makefile {
     #    $text =~ s{(?:git|http):\S+}{ do {my $t = $&; $t =~ s'\\'/'g; $t} }eg;
     #    $text =~ s/.*curl.*/do {my $t = $&; $t =~ s'%'%%'g; $t}/meg;
     #}
+
+    # TODO Timing is better be implemented as a macro
     if ( $self->cfg('makefile_timing') ) {
         $text =~ s{ (?<!\\\n)        # not after line ending in '\'
                         ^                # beginning of line

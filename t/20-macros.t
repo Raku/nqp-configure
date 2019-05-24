@@ -1,25 +1,17 @@
+use strict;
+use warnings;
 use lib 'lib';
 use NQP::Macros;
 use NQP::Config;
 use NQP::Config::Test;
 use Test::More;
+use v5.10;
 
-use v5.12;
-
-my $config     = NQP::Config::Test->new;
-$config->configure_paths;
-my $slash      = $config->cfg('slash');
-my $qchar      = $config->cfg('quote');
-my $platform   = $config->cfg('platform');
+nqp_config->configure_paths;
+my $slash      = nqp_config->cfg('slash');
+my $qchar      = nqp_config->cfg('quote');
+my $platform   = nqp_config->cfg('platform');
 my $ucplatform = uc $platform;
-
-my $macros = NQP::Macros->new( config => $config, on_fail => sub { die shift } );
-
-sub expands {
-    my ( $snippet, $expected, $name ) = @_;
-    my $got = $macros->expand($snippet);
-    is $got, $expected, $name || $snippet;
-}
 
 expands "\@sp_escape(fo\\o bar\n)\@",         "fo\\\\o\\ bar\n", 'sp_escape';
 expands "\@nl_escape(foo bar\n)\@",           "foo bar\\\n",     'nl_escape';
@@ -60,41 +52,23 @@ expands q<@nfpq(/A Path/With/Spaces)@>,
 expands q<@nfp(/A Path/With/Spaces)@>,
   qq<${slash}A Path${slash}With${slash}Spaces>;
 
-eval {
-    expands q<@include(no-file)@>, "";
-};
-if ($@) {
-    isa_ok $@, 'NQP::Macros::_Err', "got the exception";
-    like $@->message, qr/File 'no-file' not found in base directory/, "exception message ok";
-}
-else {
-    fail "macro is expected to throw";
-}
+expand_dies(
+    q<@include(no-file)@>,
+    "no file for include",
+    message => qr/aaaaaa/
+);
 
 expands q<@?include(no-file)@>, "", "ignore macro error returns empty string";
 
-eval {
-    expands q<@?include(@include(failed-nested-include)@)@>, "";
-};
-if ($@) {
-    isa_ok $@, 'NQP::Macros::_Err', "got the exception from a nested macro";
-    like $@->message, qr/File 'failed-nested-include' not found in base directory/, "exception message from nested macro ok";
-}
-else {
-    fail "macro is expected to throw";
-}
+expand_dies q<@?include(@include(failed-nested-include)@)@>,
+  "nested macro error is not ignored",
+  message => qr/File 'failed-nested-include' not found in base directory/;
 
 expands q<@?include(@?include(failed-nested-include)@)@>, "", "nested ignore";
 
-eval {
-    expands q<Text with @nop(some macros)@ to prepend @?include(@?nclude(failed-nested-include))@>, "";
-};
-if ($@) {
-    isa_ok $@, 'NQP::Macros::_Err', "exception type";
-    like $@->message, qr<\QCan't find closing )@ for macro 'include' following «\E\@\Qnop(some macros)@ to prepend »\E>, "error message on unclosed )@"
-}
-else {
-    fail "expected exception due to unclosed macro";
-}
+expand_dies
+q<Text with @nop(some macros)@ to prepend @?include(@?nclude(failed-nested-include))@>,
+  "unclosed )@",
+  message => qr<\QCan't find closing )@ for macro 'include'\E>;
 
 done_testing;

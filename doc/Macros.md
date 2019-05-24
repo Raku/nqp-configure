@@ -396,18 +396,43 @@ Similar to `include`, but doesn't wrap the output into begin/end comments.
 ### insert_filelist(template)
 
 Inserts a list of files from a file found in `@templates_dir@` (context subdir
-is respected). The list is considered to be whitespace-sperated (including
-newlines). Each file name in the list will be normalized (i.e. passed through
-`nfp`) and the resulting list will be formatted for use in a Makefile:
+is respected). The file is expanded first and then treated as a list of files.
+The list is considered to be whitespace-sperated (including newlines). Each file
+name in the list will be normalized (i.e. passed through `nfp`) and the
+result will be formatted for use in a Makefile:
 
-* one file
-* per line, newlines escaped with `\`
+* one file per line, newlines escaped with `\`
 * all lines, except the first one, indented with four spaces (unless
   configuration variable `filelist_indent` specifies another amount)
 
 ### configure_opts()
 
 Returns command line options for Configure.pl. Any input is ignored.
+
+### if(<condition> text)
+
+_Pre-expanded_
+
+Returns _text_ if `<condition>` is true. Condition can be of one of the
+following very simple forms:
+
+- `config_variable` – checks if a configuration variable is defined
+- `!config_variable` – variable is not defined
+- `config_variable==value`, `config_variable!=value` – if variable value `eq` or
+  `ne` to the _value_, respectively. 
+  
+  _Note_ that the value is used as is, no spaces allowed and no quoting/escaping
+  supported.
+
+With this macro it is possible build backend-dependent file lists:
+
+```
+File1
+@if(backend=jvm
+JavaRelatedFile
+)@
+File2
+```
 
 ### perl(code)
 
