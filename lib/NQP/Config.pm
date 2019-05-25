@@ -163,6 +163,16 @@ sub sorry {
     print $message;
 }
 
+# Output a note-kind of message:
+# ===TYPE===\n
+#   Text
+sub note {
+    my $self = shift;
+    my $type = shift;
+    my @msg = split /\n/s, join("", @_);
+    say "===$type===\n", map { "  $_" } @msg;
+}
+
 sub shell_cmd {
     $_[0]->is_win ? 'cmd' : 'sh';
 }
@@ -522,10 +532,10 @@ sub configure_refine_vars {
         # XXX This is only Unix-friendly way.
         my $default =
           defined( $self->option('sysroot') )
-          ? '/usr'
+          ? ( $self->option('sysroot') || '/usr' )
           : File::Spec->catdir( $config->{base_dir}, 'install' );
-        $self->msg( "ATTENTION:",
-            " no --prefix supplied, building and installing to $default\n" );
+        $self->note( "ATTENTION",
+            "No --prefix supplied, building and installing to $default\n" );
         $config->{prefix} = $default;
     }
     $config->{prefix} = File::Spec->rel2abs( $config->{prefix} );
@@ -700,7 +710,8 @@ sub make_option {
 sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
-    return qw<gen-moar gen-nqp help make-install expand out backends set-var>;
+    return qw<gen-moar gen-nqp help make-install expand out
+              prefix backends set-var>;
 }
 
 # Generate Configure.pl options from the data we have so far.
@@ -719,6 +730,7 @@ sub opts_for_configure {
         push @subopts, $opt_str if $opt_str;
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
+    push @subopts, "--prefix=" . $self->cfg('prefix');
     return wantarray ? @subopts : join( " ", @subopts );
 }
 
