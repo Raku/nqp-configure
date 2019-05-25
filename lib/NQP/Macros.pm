@@ -856,10 +856,13 @@ sub _m_if {
         my $matches = 0;
         if ( $cond =~ /^(?<var>\w(?:\w|:\w)*)(?:(?<op>[=\!]=)(?<val>.*))?$/ ) {
             if ( $+{op} ) {
-                my $val = $+{val};
-                my $var = $+{var};
-                my $op  = $+{op} eq '==' ? 'eq' : 'ne';
-                $matches = eval "\$self->cfg->cfg(\$var) $op \$val";
+                my $val      = $+{val};
+                my $var      = $+{var};
+                my $conf_val = $self->cfg->cfg($var);
+                my $op       = $+{op} eq '==' ? 'eq' : 'ne';
+                $matches =
+                  defined($conf_val)
+                  && eval "\$self->cfg->cfg(\$var) $op \$val";
             }
             else {
                 $matches = defined $self->cfg( $+{var} );
