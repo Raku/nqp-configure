@@ -170,7 +170,7 @@ sub note {
     my $self = shift;
     my $type = shift;
     my @msg = split /\n/s, join("", @_);
-    say "===$type===\n", map { "  $_" } @msg;
+    say "===$type===\n", join("\n", map { "  $_" } @msg);
 }
 
 sub shell_cmd {
