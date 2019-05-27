@@ -318,8 +318,7 @@ sub use_backend {
 
 sub active_backends {
     my $self = shift;
-    $self->sorry("No active backends found. Please, report this bug!")
-      unless $self->{active_backends_order};
+    return () unless $self->{active_backends_order};
     return @{ $self->{active_backends_order} };
 }
 
