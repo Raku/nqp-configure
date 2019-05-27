@@ -426,10 +426,11 @@ sub configure_relocatability {
     my $config = $self->{config};
 
     # Relocatability is not supported on AIX.
-    $self->{no_relocatable} ||= !!( $^O =~ /^(?:aix|openbsd)$/ );
+    $self->{options}->{"no-relocatable"} ||= !!( $^O =~ /^(?:aix|openbsd)$/ );
     my $prefix = $config->{prefix};
 
-    if ( $self->{no_relocatable} ) {
+    if ( $self->{options}->{"no-relocatable"} ) {
+        $config->{relocatable} = 0;
         $config->{static_nqp_home} =
           File::Spec->catdir( $prefix, 'share', 'nqp' );
         $config->{static_perl6_home} =
@@ -440,6 +441,7 @@ sub configure_relocatability {
           '-DSTATIC_PERL6_HOME=' . $config->{static_perl6_home};
     }
     else {
+        $config->{relocatable} = 1;
         $config->{static_nqp_home}          = '';
         $config->{static_perl6_home}        = '';
         $config->{static_nqp_home_define}   = '';
