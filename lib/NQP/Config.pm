@@ -169,8 +169,8 @@ sub sorry {
 sub note {
     my $self = shift;
     my $type = shift;
-    my @msg = split /\n/s, join("", @_);
-    say "===$type===\n", join("\n", map { "  $_" } @msg);
+    my @msg  = split /\n/s, join( "", @_ );
+    say "===$type===\n", join( "\n", map { "  $_" } @msg );
 }
 
 sub shell_cmd {
@@ -570,6 +570,11 @@ sub backend_errors {
 sub configure_active_backends {
     my $self = shift;
 
+    # Most likely this would never fire. But better stay on the safe side of the
+    # Moon.
+    $self->sorry("No active backends found. Please, use --backends option.")
+      unless $self->active_backends;
+
     for my $b ( $self->active_backends ) {
         $self->{backend_errors}{$b} = [];
         my $method = "configure_${b}_backend";
@@ -710,7 +715,7 @@ sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
     return qw<gen-moar gen-nqp help make-install expand out
-              prefix backends set-var>;
+      prefix backends set-var>;
 }
 
 # Generate Configure.pl options from the data we have so far.
