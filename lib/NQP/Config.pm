@@ -431,21 +431,9 @@ sub configure_relocatability {
 
     if ( $self->{options}->{"no-relocatable"} ) {
         $config->{relocatable} = 0;
-        $config->{static_nqp_home} =
-          File::Spec->rel2abs(File::Spec->catdir( $prefix, 'share', 'nqp' ));
-        $config->{static_perl6_home} =
-          File::Spec->rel2abs(File::Spec->catdir( $prefix, 'share', 'perl6' ));
-        $config->{static_nqp_home_define} =
-          '-DSTATIC_NQP_HOME=' . $config->{static_nqp_home};
-        $config->{static_perl6_home_define} =
-          '-DSTATIC_PERL6_HOME=' . $config->{static_perl6_home};
     }
     else {
         $config->{relocatable} = 1;
-        $config->{static_nqp_home}          = '';
-        $config->{static_perl6_home}        = '';
-        $config->{static_nqp_home_define}   = '';
-        $config->{static_perl6_home_define} = '';
     }
 }
 
