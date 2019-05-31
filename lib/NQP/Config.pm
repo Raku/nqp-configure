@@ -423,18 +423,10 @@ sub configure_jars {
 sub configure_relocatability {
     my $self = shift;
 
-    my $config = $self->{config};
-
     # Relocatability is not supported on AIX.
-    $self->{options}->{"no-relocatable"} ||= !!( $^O =~ /^(?:aix|openbsd)$/ );
-    my $prefix = $config->{prefix};
+    $self->{options}->{relocatable} &&= !( $^O =~ /^(?:aix|openbsd)$/ );
 
-    if ( $self->{options}->{"no-relocatable"} ) {
-        $config->{relocatable} = 0;
-    }
-    else {
-        $config->{relocatable} = 1;
-    }
+    $self->{config}->{relocatable} = !!( $self->{options}->{relocatable} );
 }
 
 # This would prepare git URL config variables for default protocol.
@@ -580,7 +572,7 @@ sub configure_from_options {
     for my $opt (
         qw<prefix libdir sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
-        no-relocatable reference>
+        relocatable reference>
       )
     {
         ( my $ckey = $opt ) =~ s/-/_/g;
@@ -675,7 +667,7 @@ sub make_option {
     state $bool_opt = {
         map { $_ => 1 }
           qw<
-          no-relocatable no-clean ignore-errors
+          relocatable no-clean ignore-errors
           >
     };
 
