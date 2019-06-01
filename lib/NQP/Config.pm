@@ -1282,6 +1282,14 @@ sub nfp {
     return $filename;
 }
 
+sub c_escape_string {
+    my $self = shift;
+    my $str = shift;
+    $str =~ s{\\}{\\\\}sg;
+    $str =~ s{"}{\\"}sg;
+    return $str;
+}
+
 #########################################################
 ### Non-method subs
 #########################################################
