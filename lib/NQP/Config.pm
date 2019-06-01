@@ -756,6 +756,7 @@ sub isa_unix {
 sub is_executable {
     my ( $self, $file ) = @_;
     die "File parameter is missing in call to is_executable" if @_ < 2;
+    return $file if -x $file;
     for my $ext (qw<exe bat>) {
         my $fname = $file . $self->cfg($ext);
         return $fname if -x $fname;
