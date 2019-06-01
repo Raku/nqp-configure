@@ -1124,7 +1124,7 @@ sub pop_ctx {
     return pop @{ $self->{contexts} };
 }
 
-# Quck push of a single config hash to the context stack.
+# Quick push of a single config hash to the context stack.
 sub push_config {
     my $self = shift;
     my $ctx_config;
