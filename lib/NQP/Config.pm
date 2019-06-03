@@ -423,13 +423,13 @@ sub configure_jars {
 sub configure_relocatability {
     my $self = shift;
 
-    # Relocatability is not supported on AIX.
-    if ( $^O =~ /^(?:aix|openbsd)$/ ) {
-        $self->{config}->{relocatable} = 'nonreloc';
+    # Relocatability is not supported on AIX and OpenBSD.
+    if ( $^O =~ /^(?:aix|openbsd)$/ && $self->{options}->{relocatable} ) {
+        $self->sorry('Relocatability is not supported on ' . $^O .
+            ".\nLeave off the --relocatable flag to do a non-relocatable build.");
     }
-    else {
-        $self->{config}->{relocatable} = $self->{options}->{relocatable} ? 'reloc' : 'nonreloc';
-    }
+
+    $self->{config}->{relocatable} = $self->{options}->{relocatable} ? 'reloc' : 'nonreloc';
 }
 
 # This would prepare git URL config variables for default protocol.
