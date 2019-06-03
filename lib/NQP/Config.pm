@@ -423,28 +423,13 @@ sub configure_jars {
 sub configure_relocatability {
     my $self = shift;
 
-    my $config = $self->{config};
-
-    # Relocatability is not supported on AIX.
-    $self->{no_relocatable} ||= !!( $^O =~ /^(?:aix|openbsd)$/ );
-    my $prefix = $config->{prefix};
-
-    if ( $self->{no_relocatable} ) {
-        $config->{static_nqp_home} =
-          File::Spec->catdir( $prefix, 'share', 'nqp' );
-        $config->{static_perl6_home} =
-          File::Spec->catdir( $prefix, 'share', 'perl6' );
-        $config->{static_nqp_home_define} =
-          '-DSTATIC_NQP_HOME=' . $config->{static_nqp_home};
-        $config->{static_perl6_home_define} =
-          '-DSTATIC_PERL6_HOME=' . $config->{static_perl6_home};
+    # Relocatability is not supported on AIX and OpenBSD.
+    if ( $^O =~ /^(?:aix|openbsd)$/ && $self->{options}->{relocatable} ) {
+        $self->sorry('Relocatability is not supported on ' . $^O .
+            ".\nLeave off the --relocatable flag to do a non-relocatable build.");
     }
-    else {
-        $config->{static_nqp_home}          = '';
-        $config->{static_perl6_home}        = '';
-        $config->{static_nqp_home_define}   = '';
-        $config->{static_perl6_home_define} = '';
-    }
+
+    $self->{config}->{relocatable} = $self->{options}->{relocatable} ? 'reloc' : 'nonreloc';
 }
 
 # This would prepare git URL config variables for default protocol.
@@ -590,7 +575,7 @@ sub configure_from_options {
     for my $opt (
         qw<prefix libdir sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
-        no-relocatable reference>
+        relocatable reference>
       )
     {
         ( my $ckey = $opt ) =~ s/-/_/g;
@@ -685,7 +670,7 @@ sub make_option {
     state $bool_opt = {
         map { $_ => 1 }
           qw<
-          no-relocatable no-clean ignore-errors
+          relocatable no-clean ignore-errors
           >
     };
 
@@ -774,6 +759,7 @@ sub isa_unix {
 sub is_executable {
     my ( $self, $file ) = @_;
     die "File parameter is missing in call to is_executable" if @_ < 2;
+    return $file if -x $file;
     for my $ext (qw<exe bat>) {
         my $fname = $file . $self->cfg($ext);
         return $fname if -x $fname;
@@ -1142,7 +1128,7 @@ sub pop_ctx {
     return pop @{ $self->{contexts} };
 }
 
-# Quck push of a single config hash to the context stack.
+# Quick push of a single config hash to the context stack.
 sub push_config {
     my $self = shift;
     my $ctx_config;
@@ -1297,6 +1283,14 @@ sub nfp {
     );
     $filename = $self->shell_quote_filename($filename) if $params{quote};
     return $filename;
+}
+
+sub c_escape_string {
+    my $self = shift;
+    my $str = shift;
+    $str =~ s{\\}{\\\\}sg;
+    $str =~ s{"}{\\"}sg;
+    return $str;
 }
 
 #########################################################
