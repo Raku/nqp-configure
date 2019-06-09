@@ -14,6 +14,7 @@ Provide support modules for [NQP](https://github.com/perl6/nqp) and [Rakudo](htt
 
 # SEE ALSO
 
+[NQP::Config module](https://github.com/perl6/nqp-configure/blob/master/doc/NQP-Config.md)
 [Macro expansion documentation](https://github.com/perl6/nqp-configure/blob/master/doc/Macros.md)
 
 # LICENSE
