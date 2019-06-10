@@ -252,8 +252,8 @@ sub has_option {
 
 sub validate_backend {
     my ( $self, $backend, $method ) = @_;
-    die "Unknown backend '$backend'"
-      . ( $method ? " in call to method '$method'" : "" )
+    $self->sorry( "Unknown backend '$backend'"
+          . ( $method ? " in a call to method '$method'" : "" ) )
       unless $self->known_backend($backend);
     return $backend;
 }
@@ -425,11 +425,14 @@ sub configure_relocatability {
 
     # Relocatability is not supported on AIX and OpenBSD.
     if ( $^O =~ /^(?:aix|openbsd)$/ && $self->{options}->{relocatable} ) {
-        $self->sorry('Relocatability is not supported on ' . $^O .
-            ".\nLeave off the --relocatable flag to do a non-relocatable build.");
+        $self->sorry( 'Relocatability is not supported on '
+              . $^O
+              . ".\nLeave off the --relocatable flag to do a non-relocatable build."
+        );
     }
 
-    $self->{config}->{relocatable} = $self->{options}->{relocatable} ? 'reloc' : 'nonreloc';
+    $self->{config}->{relocatable} =
+      $self->{options}->{relocatable} ? 'reloc' : 'nonreloc';
 }
 
 # This would prepare git URL config variables for default protocol.
@@ -1287,7 +1290,7 @@ sub nfp {
 
 sub c_escape_string {
     my $self = shift;
-    my $str = shift;
+    my $str  = shift;
     $str =~ s{\\}{\\\\}sg;
     $str =~ s{"}{\\"}sg;
     return $str;
