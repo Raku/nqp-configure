@@ -468,10 +468,6 @@ sub configure_commands {
     unless ($ok) {
         $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
     }
-    if ( $self->is_win ) {
-        $self->note( "DEBUG", "Output from $config->{make}:\n",
-            "-----------\n", $buf, "-----------\n" );
-    }
     if ( $buf =~ /^GNU Make/s ) {
         $config->{make_family} = 'gnu';
     }
