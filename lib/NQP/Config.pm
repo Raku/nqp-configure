@@ -159,9 +159,11 @@ sub mute {
 sub _gen_msg {
     my $self = shift;
     my $type = shift;
-    my @msg  = ("===$type===\n",
-      join( "\n", map { "  $_" } split /\n/s, join( "", @_ ) ));
-    return wantarray ? @msg : join("", @msg);
+    my @msg  = (
+        "===$type===\n",
+        join( "\n", map { "  $_" } split /\n/s, join( "", @_ ) )
+    );
+    return wantarray ? @msg : join( "", @msg );
 }
 
 sub sorry {
@@ -466,10 +468,14 @@ sub configure_commands {
     unless ($ok) {
         $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
     }
+    if ( $self->is_win ) {
+        $self->note( "DEBUG", "Output from $config->{make}:\n",
+            "-----------\n", $buf, "-----------\n" );
+    }
     if ( $buf =~ /^GNU Make/s ) {
         $config->{make_family} = 'gnu';
     }
-    elsif ( $buf =~ /Microsoft .* NMAKE/s ) {
+    elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility Version/s ) {
         $config->{make_family} = 'nmake';
     }
     elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
