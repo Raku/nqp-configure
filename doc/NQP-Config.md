@@ -559,3 +559,4 @@ parses and combines the result into a configuration hash which is then returned.
 # SEE ALSO
 
 - [Building Rakudo](https://github.com/rakudo/rakudo/blob/master/docs/Building-Rakudo.md)
+- [Macro Expansion](https://github.com/perl6/nqp-configure/blob/master/doc/Macros.md)
