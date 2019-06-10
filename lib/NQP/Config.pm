@@ -1,3 +1,4 @@
+## Please see file perltidy.ERR
 use v5.10.1;
 
 package NQP::Config::_Scoping;
@@ -155,10 +156,18 @@ sub mute {
     $self->{quiet} = @_ ? !!shift : 1;
 }
 
+sub _gen_msg {
+    my $self = shift;
+    my $type = shift;
+    my @msg  = ("===$type===\n",
+      join( "\n", map { "  $_" } split /\n/s, join( "", @_ ) ));
+    return wantarray ? @msg : join("", @msg);
+}
+
 sub sorry {
     my $self    = shift;
     my (@msg)   = @_;
-    my $message = join( "\n", '', '===SORRY!===', @msg, "\n" );
+    my $message = $self->_gen_msg( 'SORRY!', join( "\n", @msg ), "\n" );
     die $message unless $self->option('ignore-errors');
     print $message;
 }
@@ -168,9 +177,7 @@ sub sorry {
 #   Text
 sub note {
     my $self = shift;
-    my $type = shift;
-    my @msg  = split /\n/s, join( "", @_ );
-    say "===$type===\n", join( "\n", map { "  $_" } @msg );
+    say $self->_gen_msg(@_);
 }
 
 sub shell_cmd {
@@ -298,7 +305,8 @@ sub backend_config {
         else {
             die "Bad configuration hash passed in to backend_config";
         }
-        @{ $self->{impls}{$backend}{config} }{ keys %config } = values %config;
+        @{ $self->{impls}{$backend}{config} }{ keys %config } =
+          values %config;
     }
     return $self->{impls}{$backend}{config};
 }
@@ -415,9 +423,10 @@ sub configure_jars {
         $config->{'jna'} = $self->base_path("3rdparty/jna/jna-4.0.0.jar");
     }
 
-    $config->{asmfile}   = ( File::Spec->splitpath( $config->{asm} ) )[-1];
-    $config->{jlinefile} = ( File::Spec->splitpath( $config->{jline} ) )[-1];
-    $config->{jnafile}   = ( File::Spec->splitpath( $config->{jna} ) )[-1];
+    $config->{asmfile} = ( File::Spec->splitpath( $config->{asm} ) )[-1];
+    $config->{jlinefile} =
+      ( File::Spec->splitpath( $config->{jline} ) )[-1];
+    $config->{jnafile} = ( File::Spec->splitpath( $config->{jna} ) )[-1];
 }
 
 sub configure_relocatability {
@@ -528,7 +537,8 @@ sub configure_refine_vars {
     $config->{prefix} = File::Spec->rel2abs( $config->{prefix} );
 
     unless ( $config->{libdir} ) {
-        $config->{libdir} = File::Spec->catdir( $config->{prefix}, 'share' );
+        $config->{libdir} =
+          File::Spec->catdir( $config->{prefix}, 'share' );
     }
 }
 
@@ -963,8 +973,8 @@ sub fill_template_text {
 
     my $on_fail = sub {
         my $err = shift;
-        my $msg =
-          ref($err) && $err->isa('NQP::Macros::_Err') ? $err->message : $err;
+        my $msg = ref($err)
+          && $err->isa('NQP::Macros::_Err') ? $err->message : $err;
         my $src = $params{source} ? " in template $params{source}" : "";
         $self->sorry("$msg$src");
     };
@@ -1319,7 +1329,8 @@ sub os2platform {
     my $os = shift // $^O;
 
     # Make unix always be the last tried
-    my @platforms = ( ( grep { $_ ne 'unix' } keys %os_platforms ), 'unix' );
+    my @platforms =
+      ( ( grep { $_ ne 'unix' } keys %os_platforms ), 'unix' );
 
     my $platform;
     for my $p (@platforms) {
