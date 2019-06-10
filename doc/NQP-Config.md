@@ -395,8 +395,15 @@ template name or an arrayref of templates. If `$infile` is a list then all templ
 For each template being expanded the method creates a context with `template_file` property and a configuration variable
 of the same name. Both are holding the template file path.
 
-In the output result of each template file expansion is wrapped into a pair of _"# Generated from <template>"_ /
-_"# (end of section generated from <template>)"_ commetns unless `as_is` key in `%params` is _true_.
+In the output result of each template file expansion is wrapped into a pair of:
+
+```
+# Generated from <template>_
+<actual expanded text>
+# (end of section generated from <template>)
+```
+
+commetns unless `as_is` key in `%params` is _true_.
 
 The actual expansion is done by `fill_template_text` method.
 
