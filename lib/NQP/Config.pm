@@ -225,9 +225,9 @@ sub make_cmd {
         my $has_gmake = 0 == system('gmake --version >NUL 2>&1');
         my $has_gcc   = 0 == system('gcc --version >NUL 2>&1');
         if (
-            -x "$prefix\\bin\\nqp-m.bat"
+            -x "$prefix\\bin\\nqp-m.exe"
             && ( $_ =
-                `$prefix\\bin\\nqp-m.bat -e "print(nqp::backendconfig()<make>)"`
+                `$prefix\\bin\\nqp-m.exe -e "print(nqp::backendconfig()<make>)"`
             )
           )
         {
