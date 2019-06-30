@@ -734,7 +734,7 @@ sub opts_for_configure {
         push @subopts, $opt_str if $opt_str;
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
-    push @subopts, "--prefix=" . $self->cfg('prefix');
+    push @subopts, "--prefix=" . $self->shell_quote_filename($self->cfg('prefix'));
     return wantarray ? @subopts : join( " ", @subopts );
 }
 
