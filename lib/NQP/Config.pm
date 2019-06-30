@@ -37,7 +37,7 @@ $SIG{__DIE__} = sub { confess @_ };
 use base qw<Exporter>;
 our @EXPORT    = qw<rm_l>;
 our @EXPORT_OK = qw<
-  os2platform slash slurp system_or_die run_or_die cmp_rev read_config
+  os2platform slash slurp system_or_die run_or_die cmp_rev read_config read_config_from_command
 >;
 
 # Platform names will be incorporated into a regexp.
@@ -1423,22 +1423,29 @@ sub cmp_rev {
     $cmp;
 }
 
+sub read_config_from_command {
+    my $command = shift;
+    my %config     = ();
+    local $_;
+    no warnings;
+    if ( open my $CONFIG, '-|', $command ) {
+        while (<$CONFIG>) {
+            if (/^([^\s=]+)=(.*)/) { $config{$1} = $2 }
+        }
+        close($CONFIG);
+    }
+    return %config;
+}
+
 sub read_config {
     my @config_src = @_;
     my %config     = ();
-    local $_;
     for my $file (@config_src) {
-        no warnings;
         if ( !-f $file ) {
             print STDERR "No pre-existing installed file found at $file\n";
             next;
         }
-        if ( open my $CONFIG, '-|', "\"$file\" --show-config" ) {
-            while (<$CONFIG>) {
-                if (/^([^\s=]+)=(.*)/) { $config{$1} = $2 }
-            }
-            close($CONFIG);
-        }
+        %config = read_config_from_command("\"$file\" --show-config");
         last if %config;
     }
     return %config;
