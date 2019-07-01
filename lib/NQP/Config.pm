@@ -227,7 +227,7 @@ sub make_cmd {
         if (
             -x "$prefix\\bin\\nqp-m.exe"
             && ( $_ =
-                `$prefix\\bin\\nqp-m.exe -e "print(nqp::backendconfig()<make>)"`
+                `"$prefix\\bin\\nqp-m.exe" -e "print(nqp::backendconfig()<make>)"`
             )
           )
         {
