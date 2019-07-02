@@ -233,6 +233,15 @@ sub make_cmd {
         {
             $make = $_;
         }
+        elsif (
+            -x "$prefix\\bin\\nqp-m.bat"
+            && ( $_ =
+                `"$prefix\\bin\\nqp-m.bat" -e "print(nqp::backendconfig()<make>)"`
+            )
+          )
+        {
+            $make = $_;
+        }
         elsif ( $has_nmake && $has_cl ) {
             $make = 'nmake';
         }
