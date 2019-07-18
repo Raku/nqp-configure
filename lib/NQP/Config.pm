@@ -37,7 +37,7 @@ $SIG{__DIE__} = sub { confess @_ };
 use base qw<Exporter>;
 our @EXPORT    = qw<rm_l>;
 our @EXPORT_OK = qw<
-  os2platform slash slurp system_or_die run_or_die cmp_rev read_config
+  os2platform slash slurp system_or_die run_or_die cmp_rev read_config read_config_from_command
 >;
 
 # Platform names will be incorporated into a regexp.
@@ -225,9 +225,18 @@ sub make_cmd {
         my $has_gmake = 0 == system('gmake --version >NUL 2>&1');
         my $has_gcc   = 0 == system('gcc --version >NUL 2>&1');
         if (
+            -x "$prefix\\bin\\nqp-m.exe"
+            && ( $_ =
+                `"$prefix\\bin\\nqp-m.exe" -e "print(nqp::backendconfig()<make>)"`
+            )
+          )
+        {
+            $make = $_;
+        }
+        elsif (
             -x "$prefix\\bin\\nqp-m.bat"
             && ( $_ =
-                `$prefix\\bin\\nqp-m.bat -e "print(nqp::backendconfig()<make>)"`
+                `"$prefix\\bin\\nqp-m.bat" -e "print(nqp::backendconfig()<make>)"`
             )
           )
         {
@@ -734,7 +743,7 @@ sub opts_for_configure {
         push @subopts, $opt_str if $opt_str;
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
-    push @subopts, "--prefix=" . $self->cfg('prefix');
+    push @subopts, "--prefix=" . $self->shell_quote_filename($self->cfg('prefix'));
     return wantarray ? @subopts : join( " ", @subopts );
 }
 
@@ -1423,22 +1432,29 @@ sub cmp_rev {
     $cmp;
 }
 
+sub read_config_from_command {
+    my $command = shift;
+    my %config     = ();
+    local $_;
+    no warnings;
+    if ( open my $CONFIG, '-|', $command ) {
+        while (<$CONFIG>) {
+            if (/^([^\s=]+)=(.*)/) { $config{$1} = $2 }
+        }
+        close($CONFIG);
+    }
+    return %config;
+}
+
 sub read_config {
     my @config_src = @_;
     my %config     = ();
-    local $_;
     for my $file (@config_src) {
-        no warnings;
         if ( !-f $file ) {
             print STDERR "No pre-existing installed file found at $file\n";
             next;
         }
-        if ( open my $CONFIG, '-|', "\"$file\" --show-config" ) {
-            while (<$CONFIG>) {
-                if (/^([^\s=]+)=(.*)/) { $config{$1} = $2 }
-            }
-            close($CONFIG);
-        }
+        %config = read_config_from_command("\"$file\" --show-config");
         last if %config;
     }
     return %config;
