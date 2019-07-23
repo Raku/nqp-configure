@@ -480,7 +480,7 @@ sub configure_commands {
     if ( $buf =~ /^GNU Make/s ) {
         $config->{make_family} = 'gnu';
     }
-    elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility Version/s ) {
+    elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
         $config->{make_family} = 'nmake';
     }
     elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
