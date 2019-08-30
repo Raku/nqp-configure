@@ -586,11 +586,6 @@ sub configure_refine_vars {
         $config->{prefix} = $default;
     }
     $config->{prefix} = File::Spec->rel2abs( $config->{prefix} );
-
-    unless ( $config->{libdir} ) {
-        $config->{libdir} =
-          File::Spec->catdir( $config->{prefix}, 'share' );
-    }
 }
 
 sub parse_backends {
@@ -637,7 +632,7 @@ sub configure_from_options {
     my $self   = shift;
     my $config = $self->{config};
     for my $opt (
-        qw<prefix libdir perl6-home nqp-home sdkroot sysroot github-user git-protocol
+        qw<prefix perl6-home nqp-home sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
         relocatable reference>
       )
