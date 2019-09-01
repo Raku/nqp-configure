@@ -93,7 +93,7 @@ my %preexpand = map { $_ => 1 } qw<
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
   sp_escape nl_escape c_escape fixup uc lc abs2rel
-  shquot mkquot chomp if
+  shquot mkquot chomp if bpv bpm bsv bsm
 >;
 
 # Hash of externally registered macros.
@@ -412,6 +412,15 @@ sub not_in_context {
     }
 }
 
+sub is_in_context {
+    my $self = shift;
+    my ($ctx_name, $ctx_prop) = @_;
+    my $cfg = $self->{config_obj};
+    unless ( $cfg->prop($ctx_prop) ) {
+        $self->throw("Required '$ctx_name' context not found.");
+    }
+}
+
 sub backends_iterate {
     my $self = shift;
     my $cfg  = $self->{config_obj};
@@ -421,12 +430,16 @@ sub backends_iterate {
     my $cb = shift;
 
     for my $be ( $cfg->active_backends ) {
+        my $babbr = $cfg->backend_abbr($be);
         my %config = (
             ctx_subdir     => $be,
             backend_subdir => $be,
             backend        => $be,
-            backend_abbr   => $cfg->backend_abbr($be),
-            backend_prefix => $cfg->backend_abbr($be),
+            backend_abbr   => $babbr,
+            backend_prefix => $babbr,
+            bp             => uc($babbr) . "_",
+            bext           => $cfg->backend_ext($be),
+            btarget        => $cfg->backend_target($be),
         );
         my $be_ctx = {
             backend => $be,
@@ -890,6 +903,42 @@ sub _m_if {
         $self->throw("Invalid input of macro 'if': '$text'");
     }
     return $out;
+}
+
+# bpv(MAKE_VAR)
+# Produces prefixed makefile variable name based on MAKE_VAR -> @bp@MAKE_VAR
+sub _m_bpv {
+    my $self = shift;
+    my $var = shift;
+    $self->is_in_context( backends => 'backend' );
+    return uc($self->cfg->cfg('backend_prefix')) . "_" . $var;
+}
+
+# bsv(MAKE_VAR)
+# Produces suffixed makefile variable name based on MAKE_VAR -> MAKE_VAR_@uc(@backend@)@
+sub _m_bsv {
+    my $self = shift;
+    my $var = shift;
+    $self->is_in_context( backends => 'backend' );
+    return $var . "_" . uc($self->cfg->cfg('backend'));
+}
+
+# bpm(MAKE_VAR)
+# Produces prefixed makefile macro name based on MAKE_VAR -> $(@bp@MAKE_VAR)
+sub _m_bpm {
+    my $self = shift;
+    my $var = shift;
+    $self->is_in_context( backends => 'backend' );
+    return '$(' . uc($self->cfg->cfg('backend_abbr')) . "_" . $var . ')';
+}
+
+# bsm(MAKE_VAR)
+# Produces suffixed makefile macro name based on MAKE_VAR -> $(MAKE_VAR_@uc(@backend@)@)
+sub _m_bsm {
+    my $self = shift;
+    my $var = shift;
+    $self->is_in_context( backends => 'backend' );
+    return '$(' . $var . "_" . uc($self->cfg->cfg('backend')) . ')';
 }
 
 # varinfo(var1 var2 ...)

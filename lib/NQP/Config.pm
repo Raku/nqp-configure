@@ -127,6 +127,18 @@ sub init {
         jvm  => 'j',
         js   => 'js',
     };
+    # Precompiled files extensions
+    $self->{backend_ext} = {
+        moar => 'moarvm',
+        jvm  => 'jar',
+        js   => 'js',
+    };
+    # Value of nqp --target 
+    $self->{backend_target} = {
+        moar => 'mbc',
+        jvm  => 'jar',
+        js   => 'js',
+    };
     $self->{backends_order} = [qw<moar jvm js>];
     $self->{options}        = {};
     $self->{contexts}       = [];
@@ -301,6 +313,16 @@ sub abbr_to_backend {
 sub backend_abbr {
     my ( $self, $backend ) = @_;
     return $self->{backend_prefix}{ $self->validate_backend($backend) };
+}
+
+sub backend_ext {
+    my ( $self, $backend ) = @_;
+    return $self->{backend_ext}{ $self->validate_backend($backend) };
+}
+
+sub backend_target {
+    my ( $self, $backend ) = @_;
+    return $self->{backend_target}{ $self->validate_backend($backend) };
 }
 
 sub backend_config {
@@ -1264,10 +1286,11 @@ sub prop {
 sub in_ctx {
     my $self = shift;
     my ( $prop, $val ) = @_;
-    my %params = @_;
 
     for my $ctx ( $self->contexts ) {
-        return $ctx if $ctx->{$prop} eq $val;
+        return $ctx if ( defined($val) 
+                         ? $ctx->{$prop} eq $val 
+                         : exists $ctx->{$prop} );
     }
 
     return 0;

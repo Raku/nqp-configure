@@ -269,6 +269,9 @@ with each context. The following variables are set for the contexts:
 - `backend_abbr` – backend abbreviation. I.e. `m` for `moar`, `j` for `jvm`,
   `js` for... uhm... yes, for `js`.
 - `backend_prefix` - alias for `backend_abbr`.
+- `bp` - '@backend_abbr@` in uppercase followed by underscore. I.e., it is
+  `@uc(@backend_abbr@_)@`
+- `bext` - backend precompiled file extension.
 
 ### for_specs(text)
 
@@ -282,6 +285,21 @@ Similar to `for_backends`, but iterates over language specification revisions
 - `spec` - specification revision letter
 - `ucspec` – same as above, but in upper case
 - `lcspec` – same as above, but in guaranteed lower case.
+
+# bsv(MVAR), bpv(MVAR), bsm(MVAR), bpm(MVAR)
+
+All four do similar job. Names can be expanded as:
+
+- [b]ackend
+- [s]uffixed or [p]refixed
+- [v]ariable or [m]acro
+
+Taken MVAR returns either backend prefixed (`@bp@`) or suffixed (`@uc(@backend@)@`)
+makefile variable or macro (`$(VARIABLE)`). For example:
+
+```
+@bsm(MYVAR)@ -> $(M_MYVAR)
+```
 
 ### include(template1 template2)
 
