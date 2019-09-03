@@ -140,7 +140,9 @@ sub init {
         js   => 'js',
     };
     $self->{backends_order} = [qw<moar jvm js>];
-    $self->{options}        = {};
+    $self->{options}        = {
+        'silent-build' => 1,
+    };
     $self->{contexts}       = [];
     $self->{repo_maps}      = {
         rakudo => [qw<rakudo rakudo>],
@@ -630,6 +632,8 @@ sub configure_from_options {
 
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
+
+    $config->{noecho} = $self->{options}{'silent-build'} ? '@' : '';
 
     my ( $template, $out );
     if ( $self->option('expand') ) {
