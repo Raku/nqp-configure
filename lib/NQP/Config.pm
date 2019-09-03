@@ -141,7 +141,7 @@ sub init {
     };
     $self->{backends_order} = [qw<moar jvm js>];
     $self->{options}        = {
-        'silent-build' => 1,
+        'silent-build' => '',
     };
     $self->{contexts}       = [];
     $self->{repo_maps}      = {
@@ -633,7 +633,7 @@ sub configure_from_options {
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
-    $config->{noecho} = $self->{options}{'silent-build'} ? '@' : '';
+    $config->{noecho} = $self->has_option('silent-build') ? '@' : '';
 
     my ( $template, $out );
     if ( $self->option('expand') ) {
@@ -750,7 +750,7 @@ sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
     return qw<gen-moar gen-nqp help make-install expand out
-      prefix backends set-var>;
+      prefix backends set-var silent-build>;
 }
 
 # Generate Configure.pl options from the data we have so far.
@@ -770,6 +770,7 @@ sub opts_for_configure {
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
     push @subopts, "--prefix=" . $self->shell_quote_filename($self->cfg('prefix'));
+    push @subopts, "--silent-build" if $self->has_option('silent-build');
     return wantarray ? @subopts : join( " ", @subopts );
 }
 
