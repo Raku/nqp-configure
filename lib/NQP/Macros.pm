@@ -265,7 +265,7 @@ sub _expand {
                                         (?2)
                                       | [^\)]
                                       | \) (?! \k<msym> )
-                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro '$+{macro_func}' following «" . $last_text . "»" ) }))
+                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro '$+{macro_func}' following <<" . $last_text . ">>" ) }))
                                     )*
                                   )
                                 \)
