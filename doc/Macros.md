@@ -431,25 +431,46 @@ Returns command line options for Configure.pl. Any input is ignored.
 
 _Pre-expanded_
 
-Returns _text_ if `<condition>` is true. Condition can be of one of the
-following very simple forms:
+Returns _text_ if `<condition>` is true. The whitespace before _text_ is handled
+a bit specially so that a single space character following the `condition` would
+be taken away but any other whitespace symbol would be preserved. For example:
+
+```
+A@if(truevar==true B)@C
+```
+
+will result in `ABC`. But if `B` is preceeded with a tab (_\t_):
+
+```
+A@if(truevar==true\tB)@C
+```
+
+then the output would be `A\tBC`. This feature is particularly useful for
+building makefile receipes:
+
+```
+target:
+    @echo "Hello!"
+@if(truevar==true	@run-cmd
+)@
+```
+
+Condition can be of one of the following very simple forms:
 
 - `config_variable` – checks if a configuration variable is defined
 - `!config_variable` – variable is not defined
 - `config_variable==value`, `config_variable!=value` – if variable value `eq` or
   `ne` to the _value_, respectively. 
-  
+ 
   _Note_ that the value is used as is, no spaces allowed and no quoting/escaping
-  supported.
+  supported for it.
 
 With this macro it is possible build backend-dependent file lists:
 
 ```
 File1
-@if(backend=jvm
-JavaRelatedFile
-)@
-File2
+@if(backend=jvm JavaRelatedFile
+)@File2
 ```
 
 ### perl(code)

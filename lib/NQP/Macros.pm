@@ -874,8 +874,12 @@ sub _m_if {
     my $text = shift;
 
     my $out = "";
-    if ( $text =~ s/^(?<cond>\S+)\s+(.*)/$2/ ) {
+    if ( $text =~ /^(?<cond>\S+)(?<ws>\s)(?<text>.*)/s ) {
         my $cond    = $+{cond};
+        my $ws = $+{ws};
+        # Prepend back any non-space whitespace to the text. Mostly useful for
+        # preserving \t in makefiles.
+        $text = ($ws eq ' ' ? '' : $ws) . $+{text};
         my $matches = 0;
         if ( $cond =~ /^(?<var>\w(?:\w|:\w)*)(?:(?<op>[=\!]=)(?<val>.*))?$/ ) {
             if ( $+{op} ) {
