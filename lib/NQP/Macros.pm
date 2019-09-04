@@ -59,15 +59,15 @@ sub message {
       );
     my @in;
     for my $ctx (@contexts) {
-        if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
-            $file = $newfile;
-        }
         if ( $ctx->{current_macro} ) {
             push @in,
                 "... in macro "
               . $ctx->{current_macro} . "("
               . $ctx->{current_param}
               . ") at $file";
+        }
+        if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
+            $file = $newfile;
         }
     }
 
