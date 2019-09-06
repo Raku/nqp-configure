@@ -504,14 +504,17 @@ sub configure_commands {
     if ( $buf =~ /^GNU Make/s ) {
         $config->{make_family} = 'gnu';
         $config->{make_first_prereq} = '$<';
+        $config->{make_all_prereq} = '$^';
     }
     elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
         $config->{make_family} = 'nmake';
         $config->{make_first_prereq} = '$<';
+        $config->{make_all_prereq} = '$^';
     }
     elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
         $config->{make_family} = 'bsd';
         $config->{make_first_prereq} = '${>:[1]}';
+        $config->{make_all_prereq} = '$>';
     }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
