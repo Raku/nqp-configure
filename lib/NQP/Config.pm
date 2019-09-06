@@ -509,8 +509,8 @@ sub configure_commands {
     }
     elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
         $config->{make_family} = 'nmake';
-        $config->{make_first_prereq} = '$<';
-        $config->{make_all_prereq} = '$^';
+        $config->{make_first_prereq} = '%s';
+        $config->{make_all_prereq} = '$**';
         $config->{make_pp_pfx} = '!';
     }
     elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
