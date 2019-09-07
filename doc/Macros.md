@@ -492,6 +492,13 @@ For ease of use, the following variables are pre-declared:
   contexts.
 - `$out` – content of this variable will be returned as macro result unless the
   snippet returns something explicitly.
+
+### echo(text)
+
+_Pre-expanded_
+
+Produce `echo` command for Makefile. Takes into consideration current platform
+and quotes text properly.
  
 ### nop(text)
 
