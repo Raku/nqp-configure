@@ -269,6 +269,9 @@ with each context. The following variables are set for the contexts:
 - `backend_abbr` – backend abbreviation. I.e. `m` for `moar`, `j` for `jvm`,
   `js` for... uhm... yes, for `js`.
 - `backend_prefix` - alias for `backend_abbr`.
+- `bp` - '@backend_abbr@` in uppercase followed by underscore. I.e., it is
+  `@uc(@backend_abbr@_)@`
+- `bext` - backend precompiled file extension.
 
 ### for_specs(text)
 
@@ -282,6 +285,21 @@ Similar to `for_backends`, but iterates over language specification revisions
 - `spec` - specification revision letter
 - `ucspec` – same as above, but in upper case
 - `lcspec` – same as above, but in guaranteed lower case.
+
+# bsv(MVAR), bpv(MVAR), bsm(MVAR), bpm(MVAR)
+
+All four do similar job. Names can be expanded as:
+
+- [b]ackend
+- [s]uffixed or [p]refixed
+- [v]ariable or [m]acro
+
+Taken MVAR returns either backend prefixed (`@bp@`) or suffixed (`@uc(@backend@)@`)
+makefile variable or macro (`$(VARIABLE)`). For example:
+
+```
+@bsm(MYVAR)@ -> $(M_MYVAR)
+```
 
 ### include(template1 template2)
 
@@ -413,25 +431,46 @@ Returns command line options for Configure.pl. Any input is ignored.
 
 _Pre-expanded_
 
-Returns _text_ if `<condition>` is true. Condition can be of one of the
-following very simple forms:
+Returns _text_ if `<condition>` is true. The whitespace before _text_ is handled
+a bit specially so that a single space character following the `condition` would
+be taken away but any other whitespace symbol would be preserved. For example:
+
+```
+A@if(truevar==true B)@C
+```
+
+will result in `ABC`. But if `B` is preceeded with a tab (_\t_):
+
+```
+A@if(truevar==true\tB)@C
+```
+
+then the output would be `A\tBC`. This feature is particularly useful for
+building makefile receipes:
+
+```
+target:
+    @echo "Hello!"
+@if(truevar==true	@run-cmd
+)@
+```
+
+Condition can be of one of the following very simple forms:
 
 - `config_variable` – checks if a configuration variable is defined
 - `!config_variable` – variable is not defined
 - `config_variable==value`, `config_variable!=value` – if variable value `eq` or
   `ne` to the _value_, respectively. 
-  
+ 
   _Note_ that the value is used as is, no spaces allowed and no quoting/escaping
-  supported.
+  supported for it.
 
 With this macro it is possible build backend-dependent file lists:
 
 ```
 File1
-@if(backend=jvm
-JavaRelatedFile
-)@
-File2
+@if(backend=jvm JavaRelatedFile
+)@File2
 ```
 
 ### perl(code)
@@ -453,6 +492,13 @@ For ease of use, the following variables are pre-declared:
   contexts.
 - `$out` – content of this variable will be returned as macro result unless the
   snippet returns something explicitly.
+
+### echo(text)
+
+_Pre-expanded_
+
+Produce `echo` command for Makefile. Takes into consideration current platform
+and quotes text properly.
  
 ### nop(text)
 

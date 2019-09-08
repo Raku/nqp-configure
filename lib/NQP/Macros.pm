@@ -59,15 +59,15 @@ sub message {
       );
     my @in;
     for my $ctx (@contexts) {
-        if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
-            $file = $newfile;
-        }
         if ( $ctx->{current_macro} ) {
             push @in,
                 "... in macro "
               . $ctx->{current_macro} . "("
               . $ctx->{current_param}
               . ") at $file";
+        }
+        if ( my $newfile = $ctx->{including_file} || $ctx->{template_file} ) {
+            $file = $newfile;
         }
     }
 
@@ -93,7 +93,7 @@ my %preexpand = map { $_ => 1 } qw<
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
   sp_escape nl_escape c_escape fixup uc lc abs2rel
-  shquot mkquot chomp if
+  shquot mkquot chomp if bpv bpm bsv bsm echo
 >;
 
 # Hash of externally registered macros.
@@ -265,7 +265,7 @@ sub _expand {
                                         (?2)
                                       | [^\)]
                                       | \) (?! \k<msym> )
-                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro '$+{macro_func}' following «" . $last_text . "»" ) }))
+                                      | (?(?{ $+{msym} eq '@' }) \z (?{ $self->throw( "Can't find closing \)$+{msym} for macro '$+{macro_func}' following <<" . $last_text . ">>" ) }))
                                     )*
                                   )
                                 \)
@@ -412,6 +412,15 @@ sub not_in_context {
     }
 }
 
+sub is_in_context {
+    my $self = shift;
+    my ( $ctx_name, $ctx_prop ) = @_;
+    my $cfg = $self->{config_obj};
+    unless ( $cfg->prop($ctx_prop) ) {
+        $self->throw("Required '$ctx_name' context not found.");
+    }
+}
+
 sub backends_iterate {
     my $self = shift;
     my $cfg  = $self->{config_obj};
@@ -421,12 +430,16 @@ sub backends_iterate {
     my $cb = shift;
 
     for my $be ( $cfg->active_backends ) {
+        my $babbr  = $cfg->backend_abbr($be);
         my %config = (
             ctx_subdir     => $be,
             backend_subdir => $be,
             backend        => $be,
-            backend_abbr   => $cfg->backend_abbr($be),
-            backend_prefix => $cfg->backend_abbr($be),
+            backend_abbr   => $babbr,
+            backend_prefix => $babbr,
+            bp             => uc($babbr) . "_",
+            bext           => $cfg->backend_ext($be),
+            btarget        => $cfg->backend_target($be),
         );
         my $be_ctx = {
             backend => $be,
@@ -626,7 +639,7 @@ sub _m_nl_escape {
 # Escaping for c string literals.
 sub _m_c_escape {
     my $self = shift;
-    my $str = shift;
+    my $str  = shift;
     $str =~ s{\\}{\\\\}sg;
     $str =~ s{"}{\\"}sg;
     return $str;
@@ -730,6 +743,19 @@ sub _m_q {
     my $self = shift;
     my $q    = $self->cfg->cfg('quote');
     return $q . shift . $q;
+}
+
+# echo(str)
+# Produces echo command for Makefile. Takes special care of Windows oddities.
+sub _m_echo {
+    my $self = shift;
+    my $text = shift;
+    return '@echo '
+      . (
+          $self->cfg->is_win
+        ? $text
+        : $self->cfg->shell_quote_filename($text)
+      );
 }
 
 # abs2rel(file1 file2)
@@ -861,8 +887,13 @@ sub _m_if {
     my $text = shift;
 
     my $out = "";
-    if ( $text =~ s/^(?<cond>\S+)\s+(.*)/$2/ ) {
-        my $cond    = $+{cond};
+    if ( $text =~ /^(?<cond>\S+)(?<ws>\s)(?<text>.*)/s ) {
+        my $cond = $+{cond};
+        my $ws   = $+{ws};
+
+        # Prepend back any non-space whitespace to the text. Mostly useful for
+        # preserving \t in makefiles.
+        $text = ( $ws eq ' ' ? '' : $ws ) . $+{text};
         my $matches = 0;
         if ( $cond =~ /^(?<var>\w(?:\w|:\w)*)(?:(?<op>[=\!]=)(?<val>.*))?$/ ) {
             if ( $+{op} ) {
@@ -870,8 +901,7 @@ sub _m_if {
                 my $var      = $+{var};
                 my $conf_val = $self->cfg->cfg($var);
                 my $op       = $+{op} eq '==' ? 'eq' : 'ne';
-                $matches =
-                  defined($conf_val)
+                $matches = defined($conf_val)
                   && eval "\$self->cfg->cfg(\$var) $op \$val";
             }
             else {
@@ -890,6 +920,42 @@ sub _m_if {
         $self->throw("Invalid input of macro 'if': '$text'");
     }
     return $out;
+}
+
+# bpv(MAKE_VAR)
+# Produces prefixed makefile variable name based on MAKE_VAR -> @bp@MAKE_VAR
+sub _m_bpv {
+    my $self = shift;
+    my $var  = shift;
+    $self->is_in_context( backends => 'backend' );
+    return uc( $self->cfg->cfg('backend_prefix') ) . "_" . $var;
+}
+
+# bsv(MAKE_VAR)
+# Produces suffixed makefile variable name based on MAKE_VAR -> MAKE_VAR_@uc(@backend@)@
+sub _m_bsv {
+    my $self = shift;
+    my $var  = shift;
+    $self->is_in_context( backends => 'backend' );
+    return $var . "_" . uc( $self->cfg->cfg('backend') );
+}
+
+# bpm(MAKE_VAR)
+# Produces prefixed makefile macro name based on MAKE_VAR -> $(@bp@MAKE_VAR)
+sub _m_bpm {
+    my $self = shift;
+    my $var  = shift;
+    $self->is_in_context( backends => 'backend' );
+    return '$(' . uc( $self->cfg->cfg('backend_abbr') ) . "_" . $var . ')';
+}
+
+# bsm(MAKE_VAR)
+# Produces suffixed makefile macro name based on MAKE_VAR -> $(MAKE_VAR_@uc(@backend@)@)
+sub _m_bsm {
+    my $self = shift;
+    my $var  = shift;
+    $self->is_in_context( backends => 'backend' );
+    return '$(' . $var . "_" . uc( $self->cfg->cfg('backend') ) . ')';
 }
 
 # varinfo(var1 var2 ...)

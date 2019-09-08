@@ -7,6 +7,8 @@ use NQP::Config::Test;
 use Test::More;
 use v5.10;
 
+plan tests => 21;
+
 nqp_config->configure_paths;
 my $slash      = nqp_config->cfg('slash');
 my $qchar      = nqp_config->cfg('quote');
@@ -70,5 +72,15 @@ expand_dies
 q<Text with @nop(some macros)@ to prepend @?include(@?nclude(failed-nested-include))@>,
   "unclosed )@",
   message => qr<\QCan't find closing )@ for macro 'include'\E>;
+
+expands q<A @if(platform==> . $platform
+        . q< platform @nop($(DEPENDENT))@@nfp(VAR/aa)@ )@>,
+        'A platform $(DEPENDENT)VAR/aa ',
+        "nested macros tightly following each other";
+
+expands q<A @if(platform==> . $platform . "\t"
+        . q<platform @nop($(DEPENDENT))@@nfp(VAR/aa)@ )@>,
+        "A \tplatform \$(DEPENDENT)VAR/aa ",
+        "nested macros tightly following each other";
 
 done_testing;

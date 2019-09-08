@@ -127,8 +127,22 @@ sub init {
         jvm  => 'j',
         js   => 'js',
     };
+    # Precompiled files extensions
+    $self->{backend_ext} = {
+        moar => 'moarvm',
+        jvm  => 'jar',
+        js   => 'js',
+    };
+    # Value of nqp --target 
+    $self->{backend_target} = {
+        moar => 'mbc',
+        jvm  => 'jar',
+        js   => 'js',
+    };
     $self->{backends_order} = [qw<moar jvm js>];
-    $self->{options}        = {};
+    $self->{options}        = {
+        'silent-build' => 1,
+    };
     $self->{contexts}       = [];
     $self->{repo_maps}      = {
         rakudo => [qw<rakudo rakudo>],
@@ -301,6 +315,16 @@ sub abbr_to_backend {
 sub backend_abbr {
     my ( $self, $backend ) = @_;
     return $self->{backend_prefix}{ $self->validate_backend($backend) };
+}
+
+sub backend_ext {
+    my ( $self, $backend ) = @_;
+    return $self->{backend_ext}{ $self->validate_backend($backend) };
+}
+
+sub backend_target {
+    my ( $self, $backend ) = @_;
+    return $self->{backend_target}{ $self->validate_backend($backend) };
 }
 
 sub backend_config {
@@ -479,12 +503,21 @@ sub configure_commands {
     }
     if ( $buf =~ /^GNU Make/s ) {
         $config->{make_family} = 'gnu';
+        $config->{make_first_prereq} = '$<';
+        $config->{make_all_prereq} = '$^';
+        $config->{make_pp_pfx} = ''; # make preprocessor directive prefix
     }
     elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
         $config->{make_family} = 'nmake';
+        $config->{make_first_prereq} = '%s';
+        $config->{make_all_prereq} = '$**';
+        $config->{make_pp_pfx} = '!';
     }
     elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
         $config->{make_family} = 'bsd';
+        $config->{make_first_prereq} = '${>:[1]}';
+        $config->{make_all_prereq} = '$>';
+        $config->{make_pp_pfx} = '.';
     }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
@@ -609,6 +642,8 @@ sub configure_from_options {
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
+    $config->{noecho} = $self->option('silent-build') ? '@' : '';
+
     my ( $template, $out );
     if ( $self->option('expand') ) {
         $self->mute;
@@ -724,7 +759,7 @@ sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
     return qw<gen-moar gen-nqp help make-install expand out
-      prefix backends set-var>;
+      prefix backends set-var silent-build>;
 }
 
 # Generate Configure.pl options from the data we have so far.
@@ -744,6 +779,7 @@ sub opts_for_configure {
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
     push @subopts, "--prefix=" . $self->shell_quote_filename($self->cfg('prefix'));
+    push @subopts, "--silent-build" if $self->option('silent-build');
     return wantarray ? @subopts : join( " ", @subopts );
 }
 
@@ -1264,10 +1300,11 @@ sub prop {
 sub in_ctx {
     my $self = shift;
     my ( $prop, $val ) = @_;
-    my %params = @_;
 
     for my $ctx ( $self->contexts ) {
-        return $ctx if $ctx->{$prop} eq $val;
+        return $ctx if ( defined($val) 
+                         ? $ctx->{$prop} eq $val 
+                         : exists $ctx->{$prop} );
     }
 
     return 0;
