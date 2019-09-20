@@ -1,4 +1,3 @@
-#
 use v5.10.1;
 use strict;
 use warnings;
@@ -94,7 +93,10 @@ my %preexpand = map { $_ => 1 } qw<
   expand template ctx_template script ctx_script
   sp_escape nl_escape c_escape fixup uc lc abs2rel
   shquot mkquot chomp if bpv bpm bsv bsm echo
+  use_prereqs
 >;
+
+my %receipe_macro;
 
 # Hash of externally registered macros.
 my %external;
@@ -125,8 +127,9 @@ sub register_macro {
     $self->throw("Bad macro name '$name'") unless $name && $name =~ /^\w+$/;
     $self->throw("Macro sub isn't a code ref") unless ref($sub) eq 'CODE';
 
-    $external{$name}  = $sub;
-    $preexpand{$name} = !!$params{preexpand};
+    $external{$name}      = $sub;
+    $preexpand{$name}     = !!$params{preexpand};
+    $receipe_macro{$name} = !!$params{in_receipe};
 }
 
 sub cfg { $_[0]->{config_obj} }
@@ -204,7 +207,17 @@ sub execute {
     }
 
     my $out;
-    eval { $out = $self->$method($param); };
+    eval {
+        my $msub = sub {
+            $out = $self->$method($param);
+        };
+        if ( $receipe_macro{$macro} ) {
+            $self->in_receipe_context($msub);
+        }
+        else {
+            $msub->();
+        }
+    };
     if ($@) {
         $self->throw( $@, callstack => longmess("") );
     }
@@ -419,6 +432,43 @@ sub is_in_context {
     unless ( $cfg->prop($ctx_prop) ) {
         $self->throw("Required '$ctx_name' context not found.");
     }
+}
+
+# Execute callback in a custom context.
+sub do_in_context {
+    my $self  = shift;
+    my $cb    = shift;
+    my %props = @_;
+
+    my $ctx = $props{ctx}
+      or $self->throw("do_in_context requires 'ctx' named parameter");
+    if ( ref($ctx) ) {
+        $self->throw(
+            "do_in_context requires 'ctx' named parameter to be a hash")
+          unless ref($ctx) eq 'HASH';
+    }
+    else {
+        $ctx = { $ctx => 1 };
+    }
+    my $configs = ( $props{config} && [ $props{config} ] ) || $props{configs};
+    $ctx->{configs} = $configs;
+    my $s = $self->cfg->push_ctx($ctx);
+    return $cb->();
+}
+
+# Execute a callback in receipe context
+sub in_receipe_context {
+    my $self   = shift;
+    my $cb     = shift;
+    my %config = (
+        prereqs => $self->cfg->cfg('make_all_prereq'),
+        @_
+    );
+    $self->do_in_context(
+        $cb,
+        ctx    => '.make_receipe',
+        config => \%config
+    );
 }
 
 sub backends_iterate {
@@ -756,6 +806,17 @@ sub _m_echo {
         ? $text
         : $self->cfg->shell_quote_filename($text)
       );
+}
+
+# use_prereqs(str)
+# Records prerequisites to be used to buid current target in a makefile rule
+# Allows a target to depend on more prerequisites than directly used to build
+# it.
+sub _m_use_prereqs {
+    my $self = shift;
+    my $text = shift;
+    $self->cfg->set( 'prereqs', $text, in_ctx => '.make_receipe' );
+    return $text;
 }
 
 # abs2rel(file1 file2)

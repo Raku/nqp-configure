@@ -41,6 +41,7 @@ subtest "Contexts" => sub {
                             level     => $l,
                         }
                     ],
+                    "level$l" => $l,
                 }
               );
         }
@@ -49,6 +50,16 @@ subtest "Contexts" => sub {
         is $config->cfg('level'), 10, "last added context is dominant";
         for my $l ( 1 .. 10 ) {
             is $config->cfg("level$l"), "ok", "level $l context variable ok";
+        }
+
+        for my $l ( 1..10 ) {
+            is $config->cfg('inserted'), undef, "variable isn't set yet";
+            $config->set('inserted', 'value', in_ctx => "level$l");
+            is $config->cfg('inserted'), 'value', "variable has been inserted into a context";
+            my $ctx = $config->in_ctx("level$l");
+            ok exists $ctx->{configs}[-1]{inserted}, "variable has been inserted into correct context";
+            delete $ctx->{configs}[-1]{inserted};
+            is $config->cfg('inserted'), undef, "variable has been removed";
         }
 
         pop @ctx_sc;

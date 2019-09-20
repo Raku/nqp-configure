@@ -1269,11 +1269,22 @@ sub set {
     my $val    = shift;
     my %params = @_;
 
-    unless ( $params{in_ctx} ) {
-        $self->{config}{$key} = $val;
+    if ( my $prop = $params{in_ctx} ) {
+        my $ctx;
+        if ( $prop eq -1 ) {
+            $ctx = $self->{contexts}[-1];
+        } else {
+            unless ( $ctx = $self->in_ctx($prop) ) {
+                $self->sorry(
+                    "No context '$prop' found"
+                    . " while attemtped to set variable $key"
+                );
+            }
+        }
+        $ctx->{configs}[-1]{$key} = $val;
     }
     else {
-        $self->{contexts}[-1]{config}{$key} = $val;
+        $self->{config}{$key} = $val;
     }
 
     return $self;
@@ -1302,9 +1313,9 @@ sub in_ctx {
     my ( $prop, $val ) = @_;
 
     for my $ctx ( $self->contexts ) {
-        return $ctx if ( defined($val) 
-                         ? $ctx->{$prop} eq $val 
-                         : exists $ctx->{$prop} );
+        return $ctx 
+            if exists $ctx->{$prop} 
+               && ( !defined($val) || ($ctx->{$prop} eq $val));
     }
 
     return 0;
