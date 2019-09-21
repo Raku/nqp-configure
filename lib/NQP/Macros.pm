@@ -471,6 +471,13 @@ sub in_receipe_context {
     );
 }
 
+# Set a config variable in receipe context.
+sub set_in_receipe {
+    my $self = shift;
+    my ($var, $val) = @_;
+    $self->cfg->set($var, $val, in_ctx => '.make_receipe');
+}
+
 sub backends_iterate {
     my $self = shift;
     my $cfg  = $self->{config_obj};
