@@ -127,13 +127,15 @@ sub init {
         jvm  => 'j',
         js   => 'js',
     };
+
     # Precompiled files extensions
     $self->{backend_ext} = {
         moar => 'moarvm',
         jvm  => 'jar',
         js   => 'js',
     };
-    # Value of nqp --target 
+
+    # Value of nqp --target
     $self->{backend_target} = {
         moar => 'mbc',
         jvm  => 'jar',
@@ -142,9 +144,10 @@ sub init {
     $self->{backends_order} = [qw<moar jvm js>];
     $self->{options}        = {
         'silent-build' => 1,
+        'clean'        => 1,
     };
-    $self->{contexts}       = [];
-    $self->{repo_maps}      = {
+    $self->{contexts}  = [];
+    $self->{repo_maps} = {
         rakudo => [qw<rakudo rakudo>],
         nqp    => [qw<perl6 nqp>],
         moar   => [qw<MoarVM MoarVM>],
@@ -241,7 +244,7 @@ sub make_cmd {
         if (
             -x "$prefix\\bin\\nqp-m.exe"
             && ( $_ =
-                `"$prefix\\bin\\nqp-m.exe" -e "print(nqp::backendconfig()<make>)"`
+`"$prefix\\bin\\nqp-m.exe" -e "print(nqp::backendconfig()<make>)"`
             )
           )
         {
@@ -250,7 +253,7 @@ sub make_cmd {
         elsif (
             -x "$prefix\\bin\\nqp-m.bat"
             && ( $_ =
-                `"$prefix\\bin\\nqp-m.bat" -e "print(nqp::backendconfig()<make>)"`
+`"$prefix\\bin\\nqp-m.bat" -e "print(nqp::backendconfig()<make>)"`
             )
           )
         {
@@ -502,22 +505,22 @@ sub configure_commands {
         $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
     }
     if ( $buf =~ /^GNU Make/s ) {
-        $config->{make_family} = 'gnu';
+        $config->{make_family}       = 'gnu';
         $config->{make_first_prereq} = '$<';
-        $config->{make_all_prereq} = '$^';
-        $config->{make_pp_pfx} = ''; # make preprocessor directive prefix
+        $config->{make_all_prereq}   = '$^';
+        $config->{make_pp_pfx} = '';    # make preprocessor directive prefix
     }
     elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
-        $config->{make_family} = 'nmake';
+        $config->{make_family}       = 'nmake';
         $config->{make_first_prereq} = '%s';
-        $config->{make_all_prereq} = '$**';
-        $config->{make_pp_pfx} = '!';
+        $config->{make_all_prereq}   = '$**';
+        $config->{make_pp_pfx}       = '!';
     }
     elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
-        $config->{make_family} = 'bsd';
+        $config->{make_family}       = 'bsd';
         $config->{make_first_prereq} = '${>:[1]}';
-        $config->{make_all_prereq} = '$>';
-        $config->{make_pp_pfx} = '.';
+        $config->{make_all_prereq}   = '$>';
+        $config->{make_pp_pfx}       = '.';
     }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
@@ -759,7 +762,7 @@ sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
     return qw<gen-moar gen-nqp help make-install expand out
-      prefix backends set-var silent-build>;
+      prefix backends set-var silent-build clean>;
 }
 
 # Generate Configure.pl options from the data we have so far.
@@ -778,7 +781,8 @@ sub opts_for_configure {
         push @subopts, $opt_str if $opt_str;
     }
     push @subopts, "--backends=" . join( ",", $self->active_backends );
-    push @subopts, "--prefix=" . $self->shell_quote_filename($self->cfg('prefix'));
+    push @subopts,
+      "--prefix=" . $self->shell_quote_filename( $self->cfg('prefix') );
     push @subopts, "--silent-build" if $self->option('silent-build');
     return wantarray ? @subopts : join( " ", @subopts );
 }
@@ -908,7 +912,7 @@ sub find_filepath {
     my $ctx_subdir = $self->cfg('ctx_subdir');
     push @subdirs, $ctx_subdir if $ctx_subdir;
 
-    my $where = $params{where} || 'templates';
+    my $where     = $params{where} || 'templates';
     my $where_dir = $self->cfg( "${where}_dir", strict => 1 );
     my @suffixes;
     push @suffixes, $params{suffix}        if $params{suffix};
@@ -1273,12 +1277,11 @@ sub set {
         my $ctx;
         if ( $prop eq -1 ) {
             $ctx = $self->{contexts}[-1];
-        } else {
+        }
+        else {
             unless ( $ctx = $self->in_ctx($prop) ) {
-                $self->sorry(
-                    "No context '$prop' found"
-                    . " while attemtped to set variable $key"
-                );
+                $self->sorry( "No context '$prop' found"
+                      . " while attemtped to set variable $key" );
             }
         }
         $ctx->{configs}[-1]{$key} = $val;
@@ -1313,9 +1316,9 @@ sub in_ctx {
     my ( $prop, $val ) = @_;
 
     for my $ctx ( $self->contexts ) {
-        return $ctx 
-            if exists $ctx->{$prop} 
-               && ( !defined($val) || ($ctx->{$prop} eq $val));
+        return $ctx
+          if exists $ctx->{$prop}
+          && ( !defined($val) || ( $ctx->{$prop} eq $val ) );
     }
 
     return 0;
@@ -1482,7 +1485,7 @@ sub cmp_rev {
 
 sub read_config_from_command {
     my $command = shift;
-    my %config     = ();
+    my %config  = ();
     local $_;
     no warnings;
     if ( open my $CONFIG, '-|', $command ) {
