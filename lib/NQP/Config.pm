@@ -475,6 +475,13 @@ sub configure_relocatability {
         );
     }
 
+    if ( $self->{options}->{relocatable} && ($self->{options}->{'perl6-home'} || $self->{options}->{'nqp-home'} ) ) {
+        $self->sorry( "It's not possible to build a relocatable rakudo and use hard coded perl6-home"
+              . "\nor nqp-home directories. So either don't use the `--relocatable` parameter or don't"
+              . "\nuse the `--perl6-home` and `--nqp-home` parameters."
+        );
+    }
+
     $self->{config}->{relocatable} =
       $self->{options}->{relocatable} ? 'reloc' : 'nonreloc';
 }
@@ -579,11 +586,6 @@ sub configure_refine_vars {
         $config->{prefix} = $default;
     }
     $config->{prefix} = File::Spec->rel2abs( $config->{prefix} );
-
-    unless ( $config->{libdir} ) {
-        $config->{libdir} =
-          File::Spec->catdir( $config->{prefix}, 'share' );
-    }
 }
 
 sub parse_backends {
@@ -630,7 +632,7 @@ sub configure_from_options {
     my $self   = shift;
     my $config = $self->{config};
     for my $opt (
-        qw<prefix libdir sdkroot sysroot github-user git-protocol
+        qw<prefix perl6-home nqp-home sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
         relocatable reference>
       )
