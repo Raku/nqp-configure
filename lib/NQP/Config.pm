@@ -738,9 +738,7 @@ sub make_option {
 
     my $opt_str = "";
     if ( $bool_opt->{$opt} ) {
-        if ( $options->{$opt} ) {
-            $opt_str = "--$opt";
-        }
+        $opt_str = "--" . ($options->{$opt} ? '' : 'no-')  . "$opt";
     }
     elsif ( defined $options->{$opt} ) {
         my $opt_value =
