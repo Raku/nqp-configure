@@ -493,6 +493,21 @@ For ease of use, the following variables are pre-declared:
 - `$out` – content of this variable will be returned as macro result unless the
   snippet returns something explicitly.
 
+### use_prereqs(text)
+
+_Pre-expanded_
+
+This macro must be used within a Makefile receipe context. It doesn't modify its
+parameter but stores it in the context `prereqs` variable to be used by the
+receipe to build its target.
+
+For example, let's say a fictios macro `receipe` creates a receipe context:
+
+```
+@receipe(@nfp($(GEN_DIR)/foo.nqp)@: @use_prereqs($(FOO_SOURCES))@ @@other_deps@@
+    cat @prereqs@ >$@)@
+```
+
 ### echo(text)
 
 _Pre-expanded_
