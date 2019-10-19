@@ -1,4 +1,3 @@
-## Please see file perltidy.ERR
 use v5.10.1;
 
 package NQP::Config::_Scoping;
@@ -478,11 +477,16 @@ sub configure_relocatability {
         );
     }
 
-    if ( $self->{options}->{relocatable} && ($self->{options}->{'perl6-home'} || $self->{options}->{'nqp-home'} ) ) {
-        $self->sorry( "It's not possible to build a relocatable rakudo and use hard coded perl6-home"
+    if (
+        $self->{options}->{relocatable}
+        && (   $self->{options}->{'perl6-home'}
+            || $self->{options}->{'nqp-home'} )
+      )
+    {
+        $self->sorry(
+"It's not possible to build a relocatable rakudo and use hard coded perl6-home"
               . "\nor nqp-home directories. So either don't use the `--relocatable` parameter or don't"
-              . "\nuse the `--perl6-home` and `--nqp-home` parameters."
-        );
+              . "\nuse the `--perl6-home` and `--nqp-home` parameters." );
     }
 
     $self->{config}->{relocatable} =
@@ -740,7 +744,7 @@ sub make_option {
 
     my $opt_str = "";
     if ( $bool_opt->{$opt} ) {
-        $opt_str = "--" . ($options->{$opt} ? '' : 'no-')  . "$opt";
+        $opt_str = "--" . ( $options->{$opt} ? '' : 'no-' ) . "$opt";
     }
     elsif ( defined $options->{$opt} ) {
         my $opt_value =
@@ -761,7 +765,7 @@ sub make_option {
 sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
-    return qw<gen-moar gen-nqp help make-install expand out
+    return qw<gen-moar gen-nqp force-rebuild help make-install expand out
       prefix backends set-var silent-build clean>;
 }
 
