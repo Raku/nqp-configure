@@ -734,7 +734,7 @@ sub make_option {
     state $bool_opt = {
         map { $_ => 1 }
           qw<
-          relocatable no-clean ignore-errors silent-build
+          force-rebuild relocatable no-clean ignore-errors silent-build
           >
     };
 
