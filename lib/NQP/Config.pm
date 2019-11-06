@@ -1354,11 +1354,9 @@ sub nfp {
     my $self = shift;
     my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
     my %params   = @_;
-    my $filename = File::Spec->canonpath(
-        File::Spec->catpath(
-            $vol,
-            File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
-        )
+    my $filename = File::Spec->catpath(
+        $vol,
+        File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
     );
     $filename = $self->shell_quote_filename($filename) if $params{quote};
     return $filename;
