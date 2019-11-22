@@ -63,6 +63,9 @@ my %platform_vars = (
         windows => ';',
         default => ':',
     },
+    tab => {
+        default => "\t",
+    },
     env_open => {
         windows => '%',
         vms     => '%%',
