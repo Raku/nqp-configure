@@ -498,7 +498,10 @@ sub backends_iterate {
             bext           => $cfg->backend_ext($be),
             btarget        => $cfg->backend_target($be),
         );
+        my %iprops = %{ $cfg->{impls}{$be} };
+        delete %iprops{config};
         my $be_ctx = {
+            %iprops,
             backend => $be,
             configs => [ $cfg->{impls}{$be}{config}, \%config ],
         };
