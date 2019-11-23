@@ -1,4 +1,3 @@
-## Please see file perltidy.ERR
 use v5.10.1;
 
 package NQP::Config::_Scoping;
@@ -481,10 +480,16 @@ sub configure_relocatability {
         );
     }
 
-    if ( $self->{options}->{relocatable} && ($self->{options}->{'perl6-home'} || $self->{options}->{'nqp-home'} ) ) {
-        $self->sorry( "It's not possible to build a relocatable rakudo and use hard coded perl6-home"
+    if (
+        $self->{options}->{relocatable}
+        && (   $self->{options}->{'perl6-home'}
+            || $self->{options}->{'nqp-home'} )
+      )
+    {
+        $self->sorry(
+"It's not possible to build a relocatable rakudo and use hard coded perl6-home"
               . "\nor nqp-home directories. So either don't use the `--relocatable` parameter or don't"
-              . "\nuse the `--perl6-home` and `--nqp-home` parameters."
+              . "\nuse the `--perl6-home`, `--rakudo-home`, and `--nqp-home` parameters."
         );
     }
 
@@ -647,6 +652,13 @@ sub configure_from_options {
         $self->set_key( $ckey, $self->{options}{$opt}, default => '', );
     }
 
+    for my $opt ( keys %{ $self->{options} } ) {
+        my $opt_val = $self->{options}{$opt} // '';
+        next if ref($opt_val);
+        ( my $cf_var = $opt ) =~ s/-/_/g;
+        $config->{"opt_$cf_var"} = $opt_val;
+    }
+
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
@@ -743,7 +755,7 @@ sub make_option {
 
     my $opt_str = "";
     if ( $bool_opt->{$opt} ) {
-        $opt_str = "--" . ($options->{$opt} ? '' : 'no-')  . "$opt";
+        $opt_str = "--" . ( $options->{$opt} ? '' : 'no-' ) . "$opt";
     }
     elsif ( defined $options->{$opt} ) {
         my $opt_value =
