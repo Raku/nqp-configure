@@ -650,7 +650,7 @@ sub configure_from_options {
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
-    $config->{silent_build} = "on" if $self->option('silent-build');
+    $config->{silent_build} = $self->option('silent-build') ? "on" : "off";
 
     my ( $template, $out );
     if ( $self->option('expand') ) {
