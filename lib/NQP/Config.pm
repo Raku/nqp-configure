@@ -547,7 +547,7 @@ sub configure_commands {
         $config->{chmod}  = 'chmod --';
         $config->{cp}     = 'cp --';
         # Symlinking should override destination.
-        $config->{ln_s}   = 'ln -hfs --';
+        $config->{ln_s}   = 'ln -nfs --';
         $config->{rm_f}   = 'rm -f --';
         $config->{rm_rf}  = 'rm -rf --';
         $config->{rm_l}   = 'rm -f --';
