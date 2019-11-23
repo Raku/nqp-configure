@@ -546,6 +546,7 @@ sub configure_commands {
         $config->{mkpath} = 'mkdir -p --';
         $config->{chmod}  = 'chmod --';
         $config->{cp}     = 'cp --';
+        $config->{ln_s}   = 'ln -s --';
         $config->{rm_f}   = 'rm -f --';
         $config->{rm_rf}  = 'rm -rf --';
         $config->{rm_l}   = 'rm -f --';
@@ -555,6 +556,7 @@ sub configure_commands {
         $config->{mkpath} = '$(PERL5) -MExtUtils::Command -e mkpath';
         $config->{chmod}  = '$(PERL5) -MExtUtils::Command -e chmod';
         $config->{cp}     = '$(PERL5) -MExtUtils::Command -e cp';
+        $config->{ln_s}   = '$(PERL5) -MExtUtils::Command -e cp';
         $config->{rm_f}   = '$(PERL5) -MExtUtils::Command -e rm_f';
         $config->{rm_rf}  = '$(PERL5) -MExtUtils::Command -e rm_rf';
         $config->{rm_l} =
