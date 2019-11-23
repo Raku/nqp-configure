@@ -546,7 +546,8 @@ sub configure_commands {
         $config->{mkpath} = 'mkdir -p --';
         $config->{chmod}  = 'chmod --';
         $config->{cp}     = 'cp --';
-        $config->{ln_s}   = 'ln -s --';
+        # Symlinking should override destination.
+        $config->{ln_s}   = 'ln -hfs --';
         $config->{rm_f}   = 'rm -f --';
         $config->{rm_rf}  = 'rm -rf --';
         $config->{rm_l}   = 'rm -f --';
