@@ -62,6 +62,9 @@ my %platform_vars = (
         windows => ';',
         default => ':',
     },
+    tab => {
+        default => "\t",
+    },
     env_open => {
         windows => '%',
         vms     => '%%',
@@ -486,7 +489,8 @@ sub configure_relocatability {
         $self->sorry(
 "It's not possible to build a relocatable rakudo and use hard coded perl6-home"
               . "\nor nqp-home directories. So either don't use the `--relocatable` parameter or don't"
-              . "\nuse the `--perl6-home` and `--nqp-home` parameters." );
+              . "\nuse the `--perl6-home`, `--rakudo-home`, and `--nqp-home` parameters."
+        );
     }
 
     $self->{config}->{relocatable} =
@@ -542,6 +546,8 @@ sub configure_commands {
         $config->{mkpath} = 'mkdir -p --';
         $config->{chmod}  = 'chmod --';
         $config->{cp}     = 'cp --';
+        # Symlinking should override destination.
+        $config->{ln_s}   = 'ln -nfs --';
         $config->{rm_f}   = 'rm -f --';
         $config->{rm_rf}  = 'rm -rf --';
         $config->{rm_l}   = 'rm -f --';
@@ -551,6 +557,7 @@ sub configure_commands {
         $config->{mkpath} = '$(PERL5) -MExtUtils::Command -e mkpath';
         $config->{chmod}  = '$(PERL5) -MExtUtils::Command -e chmod';
         $config->{cp}     = '$(PERL5) -MExtUtils::Command -e cp';
+        $config->{ln_s}   = '$(PERL5) -MExtUtils::Command -e cp';
         $config->{rm_f}   = '$(PERL5) -MExtUtils::Command -e rm_f';
         $config->{rm_rf}  = '$(PERL5) -MExtUtils::Command -e rm_rf';
         $config->{rm_l} =
@@ -648,10 +655,17 @@ sub configure_from_options {
         $self->set_key( $ckey, $self->{options}{$opt}, default => '', );
     }
 
+    for my $opt ( keys %{ $self->{options} } ) {
+        my $opt_val = $self->{options}{$opt} // '';
+        next if ref($opt_val);
+        ( my $cf_var = $opt ) =~ s/-/_/g;
+        $config->{"opt_$cf_var"} = $opt_val;
+    }
+
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
-    $config->{noecho} = $self->option('silent-build') ? '@' : '';
+    $config->{silent_build} = $self->option('silent-build') ? "on" : "off";
 
     my ( $template, $out );
     if ( $self->option('expand') ) {
@@ -738,7 +752,7 @@ sub make_option {
     state $bool_opt = {
         map { $_ => 1 }
           qw<
-          force-rebuild relocatable no-clean ignore-errors silent-build
+          relocatable no-clean ignore-errors silent-build
           >
     };
 
@@ -765,7 +779,7 @@ sub make_option {
 sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
-    return qw<gen-moar gen-nqp force-rebuild help make-install expand out
+    return qw<gen-moar gen-nqp help make-install expand out
       prefix backends set-var silent-build clean>;
 }
 
@@ -1354,9 +1368,11 @@ sub nfp {
     my $self = shift;
     my ( $vol, $dirs, $file ) = File::Spec->splitpath(shift);
     my %params   = @_;
-    my $filename = File::Spec->catpath(
-        $vol,
-        File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
+    my $filename = File::Spec->canonpath(
+        File::Spec->catpath(
+            $vol,
+            File::Spec->catdir( File::Spec::Unix->splitdir($dirs) ), $file
+        )
     );
     $filename = $self->shell_quote_filename($filename) if $params{quote};
     return $filename;
