@@ -61,7 +61,7 @@ A configuration variable is set either from CLI options, or as a result of
 detection process performed by the `Configure.pl` script, or any other source of
 information.
 
-For example, `@perl6_home@` could either be set with `--perl6-home` option of
+For example, `@rakudo_home@` could either be set with `--rakudo-home` option of
 `Configure.pl`, or set to a default value using a value from `@prefix@`
 variable.
 

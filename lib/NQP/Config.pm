@@ -482,12 +482,12 @@ sub configure_relocatability {
 
     if (
         $self->{options}->{relocatable}
-        && (   $self->{options}->{'perl6-home'}
+        && (   $self->{options}->{'rakudo-home'}
             || $self->{options}->{'nqp-home'} )
       )
     {
         $self->sorry(
-"It's not possible to build a relocatable rakudo and use hard coded perl6-home"
+"It's not possible to build a relocatable rakudo and use hard coded rakudo-home"
               . "\nor nqp-home directories. So either don't use the `--relocatable` parameter or don't"
               . "\nuse the `--perl6-home`, `--rakudo-home`, and `--nqp-home` parameters."
         );
@@ -664,7 +664,7 @@ sub configure_from_options {
     my $self   = shift;
     my $config = $self->{config};
     for my $opt (
-        qw<prefix perl6-home nqp-home sdkroot sysroot github-user git-protocol
+        qw<prefix rakudo-home nqp-home sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
         relocatable reference>
       )
