@@ -752,7 +752,7 @@ sub make_option {
     state $bool_opt = {
         map { $_ => 1 }
           qw<
-          relocatable no-clean ignore-errors silent-build
+          force-rebuild relocatable no-clean ignore-errors silent-build
           >
     };
 
@@ -779,7 +779,7 @@ sub make_option {
 sub ignorable_opts {
     my $self = shift;
     my $opt  = shift;
-    return qw<gen-moar gen-nqp help make-install expand out
+    return qw<gen-moar gen-nqp force-rebuild help make-install expand out
       prefix backends set-var silent-build clean>;
 }
 
