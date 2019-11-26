@@ -580,7 +580,7 @@ sub configure_backends {
 
 sub configure_misc {
     my $self = shift;
-    my $config = $self->config;
+    my $config = $self->{config};
     my $make_pp_pfx = $self->cfg('make_pp_pfx');
     if ( $self->cfg('silent_build') eq 'on' ) {
         $config->{NOECHO_declaration} = <<NOECHO_DECL;
@@ -598,8 +598,6 @@ NOECHO = @
 ${make_pp_pfx}endif
 NOECHO_DECL
     }
-    # Have it required by the child anyway.
-    abstract;
 }
 
 sub configure_refine_vars {
