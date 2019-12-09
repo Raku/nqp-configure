@@ -427,17 +427,13 @@ sub configure_paths {
 
 sub configure_jars {
     my $self    = shift;
+    my $jars = shift;
+
     my $config  = $self->{config};
     my $options = $self->{options};
 
-    my %jars = (
-        asm => [qw<3rdparty asm asm-4.1.jar>],
-        'asm-tree' => [qw<3rdparty asm asm-tree-4.1.jar>],
-        jline => [qw<3rdparty jline jline-1.0.jar>],
-        jna => [qw<3rdparty jna jna-4.0.0.jar>],
-    );
 
-    while (my ($name, $path) = each %jars) {
+    while (my ($name, $path) = each %{$jars}) {
         my $variable = $name;
         $variable =~ s/-//;
         if ( $options->{"with-$name"} ) {
