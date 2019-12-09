@@ -429,44 +429,29 @@ sub configure_jars {
     my $self    = shift;
     my $config  = $self->{config};
     my $options = $self->{options};
-    if ( $options->{'with-asm'} ) {
-        if ( $options->{'with-asm'} ne '-' ) {
-            $config->{'asm'} = $options->{'with-asm'};
-        }
-    }
-    else {
-        $config->{'asm'} = $self->base_path(qw<3rdparty asm asm-4.1.jar>);
-    }
-    if ( $options->{'with-asm-tree'} ) {
-        if ( $options->{'with-asm-tree'} ne '-' ) {
-            $config->{'asmtree'} = $options->{'with-asm-tree'};
-        }
-    }
-    else {
-        $config->{'asmtree'} =
-          $self->base_path(qw<3rdparty asm asm-tree-4.1.jar>);
-    }
-    if ( $options->{'with-jline'} ) {
-        if ( $options->{'with-jline'} ne '-' ) {
-            $config->{'jline'} = $options->{'with-jline'};
-        }
-    }
-    else {
-        $config->{'jline'} = $self->base_path("3rdparty/jline/jline-1.0.jar");
-    }
-    if ( $options->{'with-jna'} ) {
-        if ( $options->{'with-jna'} ne '-' ) {
-            $config->{'jna'} = $options->{'with-jna'};
-        }
-    }
-    else {
-        $config->{'jna'} = $self->base_path("3rdparty/jna/jna-4.0.0.jar");
-    }
 
-    $config->{asmfile} = ( File::Spec->splitpath( $config->{asm} ) )[-1];
-    $config->{jlinefile} =
-      ( File::Spec->splitpath( $config->{jline} ) )[-1];
-    $config->{jnafile} = ( File::Spec->splitpath( $config->{jna} ) )[-1];
+    my %jars = (
+        asm => [qw<3rdparty asm asm-4.1.jar>],
+        'asm-tree' => [qw<3rdparty asm asm-tree-4.1.jar>],
+        jline => [qw<3rdparty jline jline-1.0.jar>],
+        jna => [qw<3rdparty jna jna-4.0.0.jar>],
+    );
+
+    while (my ($name, $path) = each %jars) {
+        my $variable = $name;
+        $variable =~ s/-//;
+        if ( $options->{"with-$name"} ) {
+            if ( $options->{"with-$name"} ne '-' ) {
+                $config->{$variable} = $options->{"with-$name"};
+            }
+        }
+        else {
+            $config->{$variable} = $self->base_path(@{$path});
+        }
+
+        $config->{$variable . 'file'} =
+            ( File::Spec->splitpath( $config->{$variable} ) )[-1];
+    }
 }
 
 sub configure_relocatability {
