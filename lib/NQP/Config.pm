@@ -248,9 +248,11 @@ sub make_cmd {
         if ($has_cl) {
             $cl_report =~ /Version\s+(\d+(?:\.\d+)+)/i;
             my $actual_version = $1;
-            if ( version->parse($actual_version) < "19.0" ) {
-                $self->sorry(
-                    "Expected Microsoft Compiler version 19.0+, but got "
+            my $expect_version = "19.0";
+            if ( version->parse($actual_version) < $expect_version ) {
+                $self->sorry( "Expected Microsoft Compiler version "
+                      . $expect_version
+                      . "+, but got "
                       . $actual_version );
             }
         }
@@ -437,14 +439,13 @@ sub configure_paths {
 }
 
 sub configure_jars {
-    my $self    = shift;
+    my $self = shift;
     my $jars = shift;
 
     my $config  = $self->{config};
     my $options = $self->{options};
 
-
-    while (my ($name, $path) = each %{$jars}) {
+    while ( my ( $name, $path ) = each %{$jars} ) {
         my $variable = $name;
         $variable =~ s/-//;
         if ( $options->{"with-$name"} ) {
@@ -453,11 +454,11 @@ sub configure_jars {
             }
         }
         else {
-            $config->{$variable} = $self->base_path(@{$path});
+            $config->{$variable} = $self->base_path( @{$path} );
         }
 
-        $config->{$variable . 'file'} =
-            ( File::Spec->splitpath( $config->{$variable} ) )[-1];
+        $config->{ $variable . 'file' } =
+          ( File::Spec->splitpath( $config->{$variable} ) )[-1];
     }
 }
 
