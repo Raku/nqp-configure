@@ -240,9 +240,20 @@ sub make_cmd {
     if ( $self->is_win ) {
         my $prefix    = $config->{prefix};
         my $has_nmake = 0 == system('nmake /? >NUL 2>&1');
-        my $has_cl    = can_run('cl') && `cl 2>&1` =~ /Microsoft Corporation/;
+        my $cl_report;
+        my $has_cl = can_run('cl')
+          && ( $cl_report = `cl 2>&1` ) =~ /Microsoft Corporation/;
         my $has_gmake = 0 == system('gmake --version >NUL 2>&1');
         my $has_gcc   = 0 == system('gcc --version >NUL 2>&1');
+        if ($has_cl) {
+            $cl_report =~ /Version\s+(\d+(?:\.\d+)+)/i;
+            my $actual_version = $1;
+            if ( version->parse($actual_version) < "19.0" ) {
+                $self->sorry(
+                    "Expected Microsoft Compiler version 19.0+, but got "
+                      . $actual_version );
+            }
+        }
         if (
             -x "$prefix\\bin\\nqp-m.exe"
             && ( $_ =
@@ -527,6 +538,7 @@ sub configure_commands {
         $config->{mkpath} = 'mkdir -p --';
         $config->{chmod}  = 'chmod --';
         $config->{cp}     = 'cp --';
+
         # Symlinking should override destination.
         $config->{ln_s}   = 'ln -nfs --';
         $config->{rm_f}   = 'rm -f --';
@@ -560,8 +572,8 @@ sub configure_backends {
 }
 
 sub configure_misc {
-    my $self = shift;
-    my $config = $self->{config};
+    my $self        = shift;
+    my $config      = $self->{config};
     my $make_pp_pfx = $self->cfg('make_pp_pfx');
     if ( $self->cfg('silent_build') eq 'on' ) {
         $config->{NOECHO_declaration} = <<NOECHO_DECL;
@@ -840,7 +852,7 @@ sub isa_unix {
 sub is_executable {
     my ( $self, $file ) = @_;
     die "File parameter is missing in call to is_executable" if @_ < 2;
-    return $file if -x $file;
+    return $file                                             if -x $file;
     for my $ext (qw<exe bat>) {
         my $fname = $file . $self->cfg($ext);
         return $fname if -x $fname;
