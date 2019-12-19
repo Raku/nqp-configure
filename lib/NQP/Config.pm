@@ -445,7 +445,8 @@ sub configure_jars {
     my $config  = $self->{config};
     my $options = $self->{options};
 
-    while ( my ( $name, $path ) = each %{$jars} ) {
+    foreach my $name ( keys %$jars ) {
+        my $path = $jars->{$name};
         my $variable = $name;
         $variable =~ s/-//;
         if ( $options->{"with-$name"} ) {
