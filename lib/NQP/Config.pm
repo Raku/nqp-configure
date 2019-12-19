@@ -536,7 +536,9 @@ sub configure_commands {
     }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
-            "Cannot determine the brand of your $config->{make} utility.");
+                "Cannot determine the brand of your $config->{make} utility."
+              . "\nIt is reporting itself as:\n"
+              . $buf );
     }
 
     if ( $self->isa_unix ) {
