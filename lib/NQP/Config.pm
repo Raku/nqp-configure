@@ -246,14 +246,17 @@ sub make_cmd {
         my $has_gmake = 0 == system('gmake --version >NUL 2>&1');
         my $has_gcc   = 0 == system('gcc --version >NUL 2>&1');
         if ($has_cl) {
-            $cl_report =~ /Version\s+(\d+(?:\.\d+)+)/i;
-            my $actual_version = $1;
-            my $expect_version = "19.0";
-            if ( version->parse($actual_version) < $expect_version ) {
-                $self->sorry( "Expected Microsoft Compiler version "
-                      . $expect_version
-                      . "+, but got "
-                      . $actual_version );
+            if ( $cl_report =~
+                /Microsoft\s.*\sCompiler\s+Version\s+(\d+(?:\.\d+)+)/i )
+            {
+                my $actual_version = $1;
+                my $expect_version = "19.0";
+                if ( version->parse($actual_version) < $expect_version ) {
+                    $self->sorry( "Expected Microsoft Compiler version "
+                          . $expect_version
+                          . "+, but got "
+                          . $actual_version );
+                }
             }
         }
         if (
@@ -446,7 +449,7 @@ sub configure_jars {
     my $options = $self->{options};
 
     foreach my $name ( keys %$jars ) {
-        my $path = $jars->{$name};
+        my $path     = $jars->{$name};
         my $variable = $name;
         $variable =~ s/-//;
         if ( $options->{"with-$name"} ) {
