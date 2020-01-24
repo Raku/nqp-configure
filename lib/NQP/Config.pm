@@ -498,7 +498,7 @@ sub configure_relocatability {
 sub configure_repo_urls {
     my $self = shift;
 
-    # Pre-cach repo urls to make them available for makefiles.
+    # Pre-cache repo urls to make them available for makefiles.
     for my $r ( keys %{ $self->{repo_maps} } ) {
         $self->repo_url( $r, action => 'pull' );
         $self->repo_url( $r, action => 'push' );
@@ -666,7 +666,7 @@ sub configure_from_options {
     for my $opt (
         qw<prefix rakudo-home nqp-home sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
-        relocatable reference>
+        relocatable git-reference>
       )
     {
         ( my $ckey = $opt ) =~ s/-/_/g;
@@ -1078,13 +1078,9 @@ sub fill_template_text {
 }
 
 sub reference_dir {
-    my $self      = shift;
-    my $reference = $self->cfg('reference');
-    for my $d (@_) {
-        my $dir = File::Spec->catdir( $reference, $d );
-        return $dir if -d $dir;
-    }
-    return '';
+    my ($self, $name) = @_;
+    my $reference = $self->cfg('git_reference');
+    return File::Spec->catdir( $reference, $name );
 }
 
 sub git_checkout {
@@ -1096,18 +1092,34 @@ sub git_checkout {
     my $config  = $self->config;
     my $options = $self->{options};
     my $pwd     = cwd();
+    my $pullurl = $self->repo_url( $repo, action => 'pull' );
+    my $pushurl = $self->repo_url( $repo, action => 'push' );
 
+    # Clone / fetch git reference repo
+    if ( $config->{git_reference} ) {
+        my $ref_dir =
+          $self->reference_dir( $self->{repo_maps}{$repo}[1] );
+        if ( !-d $ref_dir ) {
+            my @ref_args = ( 'git', 'clone', '--bare' );
+            push @ref_args, "--depth=$options->{'git-depth'}"
+              if $options->{'git-depth'};
+            push @ref_args, $pullurl, $ref_dir;
+            $self->msg("Cloning reference from $pullurl\n");
+            system_or_die(@ref_args);
+        }
+        else {
+            chdir($ref_dir);
+            system_or_die( 'git', 'fetch' );
+            chdir($pwd);
+        }
+    }
     # get an up-to-date repository
     if ( !-d $dir ) {
-        my ( $pullurl, $pushurl ) = (
-            $self->repo_url( $repo, action => 'pull' ),
-            $self->repo_url( $repo, action => 'push' ),
-        );
         my @args = ( 'git', 'clone' );
-        if ( $config->{reference} ) {
+        if ( $config->{git_reference} ) {
             my $ref_dir =
-              $self->reference_dir( $self->{repo_maps}{$repo}[1], $dir );
-            die "Can't $repo repository directory in $config->{reference}"
+              $self->reference_dir( $self->{repo_maps}{$repo}[1] );
+            die "Can't find $repo reference directory in $config->{git_reference}"
               unless $ref_dir;
             push @args, "--reference=$ref_dir";
         }
