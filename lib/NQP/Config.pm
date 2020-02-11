@@ -666,7 +666,7 @@ sub configure_from_options {
     for my $opt (
         qw<prefix rakudo-home nqp-home sdkroot sysroot github-user git-protocol
         rakudo-repo nqp-repo moar-repo roast-repo makefile-timing
-        relocatable git-reference>
+        relocatable git-cache-dir>
       )
     {
         ( my $ckey = $opt ) =~ s/-/_/g;
@@ -1079,8 +1079,8 @@ sub fill_template_text {
 
 sub reference_dir {
     my ($self, $name) = @_;
-    my $reference = $self->cfg('git_reference');
-    return File::Spec->catdir( $reference, $name );
+    my $git_cache_dir = $self->cfg('git_cache_dir');
+    return File::Spec->catdir( $git_cache_dir, $name );
 }
 
 sub git_checkout {
@@ -1096,7 +1096,7 @@ sub git_checkout {
     my $pushurl = $self->repo_url( $repo, action => 'push' );
 
     # Clone / fetch git reference repo
-    if ( $config->{git_reference} ) {
+    if ( $config->{git_cache_dir} ) {
         my $ref_dir =
           $self->reference_dir( $self->{repo_maps}{$repo}[1] );
         if ( !-d $ref_dir ) {
@@ -1116,10 +1116,10 @@ sub git_checkout {
     # get an up-to-date repository
     if ( !-d $dir ) {
         my @args = ( 'git', 'clone' );
-        if ( $config->{git_reference} ) {
+        if ( $config->{git_cache_dir} ) {
             my $ref_dir =
               $self->reference_dir( $self->{repo_maps}{$repo}[1] );
-            die "Can't find $repo reference directory in $config->{git_reference}"
+            die "Can't find $repo reference directory in $config->{git_cache_dir}"
               unless $ref_dir;
             push @args, "--reference=$ref_dir";
         }
