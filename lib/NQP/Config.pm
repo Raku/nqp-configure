@@ -680,6 +680,12 @@ sub configure_from_options {
         $config->{"opt_$cf_var"} = $opt_val;
     }
 
+    if ( $self->{options}{'git-reference'} ) {
+        print "===WARNING!===\n";
+        print "The --git-reference option does not exist anymore.\n";
+        print "Consider using --git-cache-dir instead.\n";
+    }
+
     $config->{stagestats} = '--stagestats'
       if $self->{options}{'makefile-timing'};
 
