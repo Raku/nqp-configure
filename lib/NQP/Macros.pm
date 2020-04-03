@@ -264,13 +264,13 @@ sub _expand {
                   | (?<macro>
                         (?<msym> (?: @@ | @))
                         (?:
-                            (?<macro_var> \w [:\w]* )
+                            (?<macro_var> \w [:\w\-]* )
                           | (?: 
                               (?: 
                                   (?<mfunc_noexp> ! )
                                 | (?<mfunc_if_can> \? )
                               )* 
-                              (?<macro_func> \w [:\w]* )
+                              (?<macro_func> \w [:\w\-]* )
                               (?>
                                 \(
                                   (?<mparam>
