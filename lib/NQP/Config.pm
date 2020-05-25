@@ -512,27 +512,30 @@ sub configure_commands {
     $config->{make} = $self->make_cmd;
 
     my $buf;
-    my $ok = run( command => [ $config->{make}, q<-v> ], buffer => \$buf );
-    unless ($ok) {
-        $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
-    }
-    if ( $buf =~ /^GNU Make/s ) {
-        $config->{make_family}       = 'gnu';
-        $config->{make_first_prereq} = '$<';
-        $config->{make_all_prereq}   = '$^';
-        $config->{make_pp_pfx} = '';    # make preprocessor directive prefix
-    }
-    elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
-        $config->{make_family}       = 'nmake';
-        $config->{make_first_prereq} = '%s';
-        $config->{make_all_prereq}   = '$**';
-        $config->{make_pp_pfx}       = '!';
-    }
-    elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
-        $config->{make_family}       = 'bsd';
-        $config->{make_first_prereq} = '${>:[1]}';
-        $config->{make_all_prereq}   = '$>';
-        $config->{make_pp_pfx}       = '.';
+    for (my $retries = 50; $retries; $retries--) {
+        my $ok = run( command => [ $config->{make}, q<-v> ], buffer => \$buf );
+        unless ($ok) {
+            $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
+        }
+        if ( $buf =~ /^GNU Make/s ) {
+            $config->{make_family}       = 'gnu';
+            $config->{make_first_prereq} = '$<';
+            $config->{make_all_prereq}   = '$^';
+            $config->{make_pp_pfx} = '';    # make preprocessor directive prefix
+        }
+        elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
+            $config->{make_family}       = 'nmake';
+            $config->{make_first_prereq} = '%s';
+            $config->{make_all_prereq}   = '$**';
+            $config->{make_pp_pfx}       = '!';
+        }
+        elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
+            $config->{make_family}       = 'bsd';
+            $config->{make_first_prereq} = '${>:[1]}';
+            $config->{make_all_prereq}   = '$>';
+            $config->{make_pp_pfx}       = '.';
+        }
+        last if defined $config->{make_family};
     }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
