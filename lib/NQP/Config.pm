@@ -151,9 +151,9 @@ sub init {
     $self->{contexts}  = [];
     $self->{repo_maps} = {
         rakudo => [qw<rakudo rakudo>],
-        nqp    => [qw<perl6 nqp>],
+        nqp    => [qw<Raku nqp>],
         moar   => [qw<MoarVM MoarVM>],
-        roast  => [qw<perl6 roast>],
+        roast  => [qw<Raku roast>],
     };
 
     $self->{impls} = {};
