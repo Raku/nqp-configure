@@ -5,7 +5,7 @@ macro is:
 
 * enclosed in symbols `@` or `@@` (unless escaped with `\`)
 * has a name which a combination of word chars (`\w` in regexp terms) and colons
-  `:` 
+  `:`
 * can be either a configuration variable or a macro function
 
 In this document we will call macro functions just _macro_s in this document
@@ -83,7 +83,7 @@ nested macros, functions are generally separated into two groups:
 - One group takes the input text as-is. It is then up to the macro itself at
   which point it would do the expansion.
 - For another group (named _preexpanded macros_ for convenience) the text first
-  gets expanded by the macros subsystem and then passed in as the parameter. 
+  gets expanded by the macros subsystem and then passed in as the parameter.
 
 For example:
 
@@ -125,7 +125,7 @@ is considered to be the most reliable way to get the job done.
 ## Contexts
 
 Contexts are a concept of `NQP::Config` module which is heavily utilized by
-`NQP::Macros`. 
+`NQP::Macros`.
 
 A context is a state structure which keeps configuration properties and
 variables. While properties are not generally available for the expansion
@@ -152,7 +152,7 @@ For simplicity, macros in this section are not enclosed with `@`.
 
 _Pre-expand_
 
-See Perl 5 `chomp` function.
+See Perl's `chomp` function.
 
 ### expand(text)
 
@@ -184,7 +184,7 @@ _Pre-expanded_
 
 The macro name stands for Normalize File Path. Converts Unix-style paths with
 `/` directory separator into what is suitable for the current OS. Most typical
-example is Windows where slashes are replaced with backslashes. 
+example is Windows where slashes are replaced with backslashes.
 
 If a path contains whitespaces it will be quoted following the quoting rules of
 the current platform. For example:
@@ -231,7 +231,7 @@ like `src/Perl6/Actions.nqp src/Perl6/PodActions.nqp`.
 _Pre-expanded_
 
 Quotes path by using rules valid for the shell of the current
-platform. 
+platform.
 
 ```
 target: $(DEPS)
@@ -310,7 +310,7 @@ the template file in templates directory defined by `templates_dir`
 confgiguration variable (`@base_dir@/tools/templates` normally). If current
 context defines `ctx_subdir` variable then this subdirectory within the
 templates directory is checked first. Then if no file is found the macro falls
-back to the default `@templates_dir@`. 
+back to the default `@templates_dir@`.
 
 It is a good practice to have template's filename to end with `.in` extension.
 But the actual order of filenames tried check for this extension last. First the
@@ -460,8 +460,8 @@ Condition can be of one of the following very simple forms:
 - `config_variable` – checks if a configuration variable is defined
 - `!config_variable` – variable is not defined
 - `config_variable==value`, `config_variable!=value` – if variable value `eq` or
-  `ne` to the _value_, respectively. 
- 
+  `ne` to the _value_, respectively.
+
   _Note_ that the value is used as is, no spaces allowed and no quoting/escaping
   supported for it.
 
@@ -514,7 +514,7 @@ _Pre-expanded_
 
 Produce `echo` command for Makefile. Takes into consideration current platform
 and quotes text properly.
- 
+
 ### nop(text)
 
 Does nothing, returns the parameter text as is. Can be used as an escape macro
@@ -541,7 +541,7 @@ Would result in:
 
 The following variables are set by the `NQP::Config` as defaults:
 
-- `perl` Perl 5 executable.
+- `perl` Perl executable.
 - `slash` Directory separator, used by the current OS
 - `shell` Default shell
 - `base_dir` Where `Configure.pl` is located. In other words, the directory
@@ -558,4 +558,3 @@ The following variables are set by the `NQP::Config` as defaults:
 - `cpsep` Separator of pathlists for the current OS. `;` for Windows, `:`
   otherwise.
 - `runner_suffix` Set from `bat` variable for now.
-

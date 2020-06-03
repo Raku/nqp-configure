@@ -26,11 +26,11 @@ $cfg->expand_template;
 
 # DESCRIPTION
 
-This is a helper module for build a language from NQP/Perl6 family. It provides basic utility methods,
+This is a helper module for build a language from NQP/Raku family. It provides basic utility methods,
 `configure_`-family methods for presetting environment-dependent values, and methods to manipulate this data.
 
 `NQP::Config` is a base (_abstract_) class which has to be inherited and completed by a language-specific class. See
-[`NQP::Config::NQP`](https://github.com/perl6/nqp/blob/master/tools/lib/NQP/Config/NQP.pm) and
+[`NQP::Config::NQP`](https://github.com/Raku/nqp/blob/master/tools/lib/NQP/Config/NQP.pm) and
 [`NQP::Config::Rakudo`](https://github.com/rakudo/rakudo/blob/master/tools/lib/NQP/Config/Rakudo.pm) classes from `nqp`
 and `rakudo` implementations.
 
@@ -57,7 +57,7 @@ object itself are the bottom-level properties, similar to `config` key been the 
 
 Note that configuration keys is using plural form of its name `configs`. This is because it is a list too, a list of
 configuration hashes in this case. Though it seems somewhat overcomplicated but there is a good explanation for this:
-sometimes a context config chunk is being assembled from several pieces; while merging of hashrefs in Perl5 is
+sometimes a context config chunk is being assembled from several pieces; while merging of hashrefs in Perl is
 terrible...
 
 Another tricky part is that chunks in the context list are searched for a variable in start-to-end order. This is
@@ -93,7 +93,7 @@ a context when code is leaving a scope.
 
 # ATTRIBUTES
 
-Because `NQP::Class` is build using barebones Perl5 OO implementation, there're no attributes as such. We're listing
+Because `NQP::Class` is build using barebones Perl OO implementation, there're no attributes as such. We're listing
 here keys on a `NQP::Class` instance.
 
 _Some irrelevant and internally used keys would miss a description. They're only listed here to avoid being accidentally
@@ -286,7 +286,7 @@ Returns a list or arrayref (context dependant) of stored errors for a `$backend`
 Expands the default template (see [attribute](#ATTRIBUTES) `template`). The result of expansion goes into file specified
 by `out` attribute. If `out_header` attribute is defined it's prepended to the expanded text.
 
-See more details in [macro expansion docs](https://github.com/perl6/nqp-configure/blob/master/doc/Macros.md).
+See more details in [macro expansion docs](https://github.com/Raku/nqp-configure/blob/master/doc/Macros.md).
 
 ### `save_config_status`
 
@@ -566,4 +566,4 @@ parses and combines the result into a configuration hash which is then returned.
 # SEE ALSO
 
 - [Building Rakudo](https://github.com/rakudo/rakudo/blob/master/docs/Building-Rakudo.md)
-- [Macro Expansion](https://github.com/perl6/nqp-configure/blob/master/doc/Macros.md)
+- [Macro Expansion](https://github.com/Raku/nqp-configure/blob/master/doc/Macros.md)

@@ -4,7 +4,7 @@ nqp-configure
 
 # DESCRIPTION
 
-Provide support modules for [NQP](https://github.com/perl6/nqp) and [Rakudo](https://github.com/rakudo/rakudo)
+Provide support modules for [NQP](https://github.com/Raku/nqp) and [Rakudo](https://github.com/rakudo/rakudo)
 `Configure.pl` scripts.
 
 ## Modules Provided
@@ -14,8 +14,8 @@ Provide support modules for [NQP](https://github.com/perl6/nqp) and [Rakudo](htt
 
 # SEE ALSO
 
-* [NQP::Config module](https://github.com/perl6/nqp-configure/blob/master/doc/NQP-Config.md)
-* [Macro expansion documentation](https://github.com/perl6/nqp-configure/blob/master/doc/Macros.md)
+* [NQP::Config module](https://github.com/Raku/nqp-configure/blob/master/doc/NQP-Config.md)
+* [Macro expansion documentation](https://github.com/Raku/nqp-configure/blob/master/doc/Macros.md)
 
 # LICENSE
 
