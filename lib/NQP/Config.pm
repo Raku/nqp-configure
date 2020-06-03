@@ -588,15 +588,15 @@ sub configure_misc {
     if ( $self->cfg('silent_build') eq 'on' ) {
         $config->{NOECHO_declaration} = <<NOECHO_DECL;
 NOECHO = @
-${make_pp_pfx}ifdef VERBOSE_BUILD 
-NOECHO = 
+${make_pp_pfx}ifdef VERBOSE_BUILD
+NOECHO =
 ${make_pp_pfx}endif
 NOECHO_DECL
     }
     else {
         $config->{NOECHO_declaration} = <<NOECHO_DECL;
-NOECHO = 
-${make_pp_pfx}ifdef SILENT_BUILD 
+NOECHO =
+${make_pp_pfx}ifdef SILENT_BUILD
 NOECHO = @
 ${make_pp_pfx}endif
 NOECHO_DECL
