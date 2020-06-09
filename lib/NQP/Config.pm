@@ -151,9 +151,9 @@ sub init {
     $self->{contexts}  = [];
     $self->{repo_maps} = {
         rakudo => [qw<rakudo rakudo>],
-        nqp    => [qw<perl6 nqp>],
+        nqp    => [qw<Raku nqp>],
         moar   => [qw<MoarVM MoarVM>],
-        roast  => [qw<perl6 roast>],
+        roast  => [qw<Raku roast>],
     };
 
     $self->{impls} = {};
@@ -512,27 +512,30 @@ sub configure_commands {
     $config->{make} = $self->make_cmd;
 
     my $buf;
-    my $ok = run( command => [ $config->{make}, q<-v> ], buffer => \$buf );
-    unless ($ok) {
-        $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
-    }
-    if ( $buf =~ /^GNU Make/s ) {
-        $config->{make_family}       = 'gnu';
-        $config->{make_first_prereq} = '$<';
-        $config->{make_all_prereq}   = '$^';
-        $config->{make_pp_pfx} = '';    # make preprocessor directive prefix
-    }
-    elsif ( $buf =~ /Microsoft/s ) {
-        $config->{make_family}       = 'nmake';
-        $config->{make_first_prereq} = '%s';
-        $config->{make_all_prereq}   = '$**';
-        $config->{make_pp_pfx}       = '!';
-    }
-    elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
-        $config->{make_family}       = 'bsd';
-        $config->{make_first_prereq} = '${>:[1]}';
-        $config->{make_all_prereq}   = '$>';
-        $config->{make_pp_pfx}       = '.';
+    for (my $retries = 50; $retries; $retries--) {
+        my $ok = run( command => [ $config->{make}, q<-v> ], buffer => \$buf );
+        unless ($ok) {
+            $ok = run( command => [ $config->{make}, q</?> ], buffer => \$buf );
+        }
+        if ( $buf =~ /^GNU Make/s ) {
+            $config->{make_family}       = 'gnu';
+            $config->{make_first_prereq} = '$<';
+            $config->{make_all_prereq}   = '$^';
+            $config->{make_pp_pfx} = '';    # make preprocessor directive prefix
+        }
+        elsif ( $buf =~ /Microsoft/s ) {
+            $config->{make_family}       = 'nmake';
+            $config->{make_first_prereq} = '%s';
+            $config->{make_all_prereq}   = '$**';
+            $config->{make_pp_pfx}       = '!';
+        }
+        elsif ( $self->is_bsd && $config->{make} =~ /\bmake$/ ) {
+            $config->{make_family}       = 'bsd';
+            $config->{make_first_prereq} = '${>:[1]}';
+            $config->{make_all_prereq}   = '$>';
+            $config->{make_pp_pfx}       = '.';
+        }
+        last if defined $config->{make_family};
     }
     unless ( defined $config->{make_family} ) {
         $self->sorry(
@@ -585,15 +588,15 @@ sub configure_misc {
     if ( $self->cfg('silent_build') eq 'on' ) {
         $config->{NOECHO_declaration} = <<NOECHO_DECL;
 NOECHO = @
-${make_pp_pfx}ifdef VERBOSE_BUILD 
-NOECHO = 
+${make_pp_pfx}ifdef VERBOSE_BUILD
+NOECHO =
 ${make_pp_pfx}endif
 NOECHO_DECL
     }
     else {
         $config->{NOECHO_declaration} = <<NOECHO_DECL;
-NOECHO = 
-${make_pp_pfx}ifdef SILENT_BUILD 
+NOECHO =
+${make_pp_pfx}ifdef SILENT_BUILD
 NOECHO = @
 ${make_pp_pfx}endif
 NOECHO_DECL
