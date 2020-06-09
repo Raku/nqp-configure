@@ -523,7 +523,7 @@ sub configure_commands {
             $config->{make_all_prereq}   = '$^';
             $config->{make_pp_pfx} = '';    # make preprocessor directive prefix
         }
-        elsif ( $buf =~ /Microsoft \(R\) Program Maintenance Utility/s ) {
+        elsif ( $buf =~ /Microsoft/s ) {
             $config->{make_family}       = 'nmake';
             $config->{make_first_prereq} = '%s';
             $config->{make_all_prereq}   = '$**';
