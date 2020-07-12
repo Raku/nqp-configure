@@ -83,9 +83,9 @@ my %platform_vars = (
         windows => qq<\n>,
         default => qq<#!/bin/sh\n>,
     },
-    sh_allparams => {    # All command line params
+    sh_allparams => {    # All command line params, quoted if necessary
         windows => q<%*>,
-        default => q<$@>,
+        default => q<"$@">,
     },
 );
 
