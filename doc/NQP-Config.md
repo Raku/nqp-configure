@@ -520,6 +520,11 @@ Returns normalized file name.
 
 Escapes a string for use in `C` source code.
 
+### `sq_escape_string($string)`
+
+Escapes a string for use in single quoted delimiters.
+E.g. a Perl '' string.
+
 # ROUTINES
 
 ### `slash`

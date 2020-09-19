@@ -91,9 +91,9 @@ my %preexpand = map { $_ => 1 } qw<
   include include_capture nfp nfpl nfpq nfplq q
   insert insert_capture insert_filelist
   expand template ctx_template script ctx_script
-  sp_escape nl_escape c_escape fixup uc lc abs2rel
-  shquot mkquot chomp if bpv bpm bsv bsm echo
-  use_prereqs
+  sp_escape nl_escape c_escape sq_escape fixup uc
+  lc abs2rel shquot mkquot chomp if bpv bpm bsv
+  bsm echo use_prereqs
 >;
 
 my %receipe_macro;
@@ -705,8 +705,19 @@ sub _m_c_escape {
     return $str;
 }
 
+# sq_escape(text)
+# Escaping single quotes and backslashes.
+# Can e.g. be used in a Perl '' string.
+sub _m_sq_escape {
+    my $self = shift;
+    my $str  = shift;
+    $str =~ s{\\}{\\\\}sg;
+    $str =~ s{'}{\\'}sg;
+    return $str;
+}
+
 # sp_unescape(a\ st\ring)
-# Simlpe unescaping horizontal whitespaces from backslashes.
+# Simple unescaping horizontal whitespaces from backslashes.
 sub _m_sp_unescape {
     my $self = shift;
     my $str  = shift;

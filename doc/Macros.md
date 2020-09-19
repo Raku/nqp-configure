@@ -174,6 +174,15 @@ _Pre-expanded_
 
 Escapes newlines in the parameter with `\`.
 
+### `c_escape(text)`
+
+Escapes a string for use in `C` source code.
+
+### `sq_escape(text)`
+
+Escaping single quotes and backslashes.
+Can e.g. be used in a Perl '' string.
+
 ### sp_unescape(text)
 
 Very simple unescaping. Replaces all `\<char>` sequences with `<char>`.

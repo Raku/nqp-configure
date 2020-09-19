@@ -1425,6 +1425,14 @@ sub c_escape_string {
     return $str;
 }
 
+sub sq_escape_string {
+    my $self = shift;
+    my $str  = shift;
+    $str =~ s{\\}{\\\\}sg;
+    $str =~ s{'}{\\'}sg;
+    return $str;
+}
+
 #########################################################
 ### Non-method subs
 #########################################################
