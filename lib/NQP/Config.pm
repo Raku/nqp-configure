@@ -52,7 +52,6 @@ my %platform_vars = (
     bat => {
         windows => '.bat',
         default => '',
-
     },
     exe => {
         windows => '.exe',
@@ -550,7 +549,13 @@ sub configure_commands {
         $config->{cp}     = 'cp --';
 
         # Symlinking should override destination.
-        $config->{ln_s}   = 'ln -nfs --';
+        $config->{ln_s}   = $self->is_aix
+                            ? '$(PERL5) ' 
+                                . $self->shell_quote_filename(
+                                    File::Spec->catfile(
+                                        $self->cfg('base_dir'),
+                                        'tools', 'build', 'ln_s.pl'))
+                            : 'ln -nfs --';
         $config->{rm_f}   = 'rm -f --';
         $config->{rm_rf}  = 'rm -rf --';
         $config->{rm_l}   = 'rm -f --';
@@ -845,6 +850,11 @@ sub is_solaris {
 sub is_bsd {
     state $bsd = $^O =~ /bsd/;
     return $bsd;
+}
+
+sub is_aix {
+    state $aix = $^O =~ /aix/;
+    return $aix;
 }
 
 sub isa_unix {
