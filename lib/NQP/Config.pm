@@ -848,7 +848,7 @@ sub is_solaris {
 }
 
 sub is_bsd {
-    state $bsd = $^O =~ /bsd/;
+    state $bsd = $^O =~ /bsd|dragonfly/;
     return $bsd;
 }
 
