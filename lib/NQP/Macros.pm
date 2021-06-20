@@ -411,6 +411,21 @@ sub include {
     return $text;
 }
 
+sub insert_list {
+    my $self = shift;
+    my $file = shift;
+    my %params = @_;
+    my $cfg    = $self->{config_obj};
+    my $indent = " " x ( $cfg->{config}{list_indent} || 4 );
+    my $text   = $self->_expand( NQP::Config::slurp($file) );
+    my @list  = grep { length } split /\n+/s, $text;
+    if ($params{cb}) {
+        @list = map { $params{cb}->($_) } @list;
+    }
+    $text = join " \\\n$indent", @list;
+    return $text;
+}
+
 sub not_in_context {
     my $self = shift;
     my $cfg  = $self->{config_obj};
@@ -577,6 +592,27 @@ sub _m_for_backends {
     return $out;
 }
 
+sub _m_for {
+    my $self = shift;
+    my ($var, $text) = split " ", shift, 2;
+    my $cfg = $self->{config_obj};
+
+    my $var_text = $cfg->cfg( $self->_expand($var) );
+
+    my $out = "";
+
+    foreach my $item (split " ", $var_text) {
+        # @_@
+        my $s = $cfg->push_config(
+            '_' => $item,
+            '_item_' => $item,
+        );
+        $out .= $self->_expand($text);
+    }
+
+    return $out;
+}
+
 # expand(text)
 # Simply expands the text. Could be useful when:
 # @expand(@!nfp(@build_dir@/@macro(...)@)@)@
@@ -661,19 +697,26 @@ sub _m_fixup {
     return $self->{config_obj}->fixup_makefile($text);
 }
 
+# insert_list(filename)
+# Inserts a list from file filename. File content is expanded first, then split
+# by newlines into single items. Empty lines are thrown away. Each items in the
+# list will be indented by @list_indent@ spaces except for the first one.
+sub _m_insert_list {
+    my $self   = shift;
+    my $cfg    = $self->{config_obj};
+    my $file   = $cfg->template_file_path( shift, required => 1 );
+    return $self->insert_list($file);
+}
+
 # insert_filelist(filename)
-# Inserts a list of files defined in file filename. File content is  expanded.
-# All file names in the list will be indented by 4 spaces except for the first
-# one.
+# Similar to the insert_list macro but each item is nfp-normalized
 sub _m_insert_filelist {
     my $self   = shift;
     my $cfg    = $self->{config_obj};
-    my $indent = " " x ( $cfg->{config}{filelist_indent} || 4 );
     my $file   = $cfg->template_file_path( shift, required => 1 );
-    my $text   = $self->_expand( NQP::Config::slurp($file) );
-    my @flist  = map { $cfg->nfp($_) } grep { $_ } split /\s+/s, $text;
-    $text = join " \\\n$indent", @flist;
-    return $text;
+    return $self->insert_list(
+        $file,
+        cb => sub { $cfg->nfp(shift) });
 }
 
 # sp_escape(a string)

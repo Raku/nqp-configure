@@ -265,6 +265,75 @@ Generates environment variable in the format understood by the current platform.
 I.e. for `@envvar(VAR)@` it will generate `$VAR` on \*nix and `%VAR%` on
 DOS-derivatives (Windows, OS/2).
 
+### for(varname text)
+
+Iterates over space-separated list of items in a configuration variable
+`varname`. For each item in the list a new context is set which defines
+`@_@` and `@_item_@` variables with the item value. Both variables are just
+each other alises.
+
+`varname` and `text` parameters are expanded. `varname` is expanded in the outer
+context of `for`. `text` is expanded in the context of `for` macro itself. 
+
+For example, if a variable `mylist` is set to "foo bar baz":
+
+```
+@for(mylist
+# @_@
+)@
+```
+
+Then the outcome of the above will be:
+
+```
+# foo
+# bar
+# baz
+```
+
+Also, if a variable `indirect` is set to _"mylist"_ then the following example
+will expand to the same:
+
+```
+@for(@indirect@
+# @_@
+)@
+```
+
+Due to `varname` parameter expanding in the outer context of the macro, then
+if variable `var_list` is set to something like _"var1 var2 var3"_ then we can
+nest two `for` macros in the following way:
+
+```
+@for(var_list
+## @_@
+@for(@_@ 
+# @_@
+)@)@
+```
+
+What happens here is the internal `for` will consequently iterate over all three
+`varN` variables. Say, if we have them set, correspondingly, to
+
+- 1 2
+- a b
+- I II
+
+then something like the following will be eventually found in the expanded
+output:
+
+```
+## var1
+# 1
+# 2
+## var2
+# a
+# b
+## var3
+# I
+# II
+```
+
 ### for_backends(text)
 
 Iterates through all active backends (i.e. defined with `--backends` command
@@ -420,17 +489,22 @@ _Pre-expanded_
 
 Similar to `include`, but doesn't wrap the output into begin/end comments.
 
+### insert_list(template)
+
+Inserts a list of items from a file found in `@templates_dir@` (context subdir
+is respected). The file is expanded first and then the result is split into
+single items by newlines. In other words, each line is considered an item.
+Empty ones are thrown away. The items are than assembled back according to the
+following rules:
+
+* each item placed into a separate line and followed by a backslash
+* all lines, except the first one, indented with four spaces (unless
+  configuration variable `list_indent` specifies another amount)
+
 ### insert_filelist(template)
 
-Inserts a list of files from a file found in `@templates_dir@` (context subdir
-is respected). The file is expanded first and then treated as a list of files.
-The list is considered to be whitespace-sperated (including newlines). Each file
-name in the list will be normalized (i.e. passed through `nfp`) and the
-result will be formatted for use in a Makefile:
-
-* one file per line, newlines escaped with `\`
-* all lines, except the first one, indented with four spaces (unless
-  configuration variable `filelist_indent` specifies another amount)
+Similar to `insert_list` macro but items are considered as path elements and
+normalized with `nfp`.
 
 ### configure_opts()
 

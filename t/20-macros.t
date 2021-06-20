@@ -7,7 +7,7 @@ use NQP::Config::Test;
 use Test::More;
 use v5.10;
 
-plan tests => 21;
+plan tests => 22;
 
 nqp_config->configure_paths;
 my $slash      = nqp_config->cfg('slash');
@@ -82,5 +82,28 @@ expands q<A @if(platform==> . $platform . "\t"
         . q<platform @nop($(DEPENDENT))@@nfp(VAR/aa)@ )@>,
         "A \tplatform \$(DEPENDENT)VAR/aa ",
         "nested macros tightly following each other";
+
+my $s = nqp_config->push_config(
+    var_list => 'var1 var2 var3',
+    var1 => "1 2",
+    var2 => "a b",
+    var3 => "I II",
+);
+
+
+expands q<@for(var_list
+## @_@
+@for(@_@ 
+# @_item_@
+)@)@>, q<## var1
+# 1
+# 2
+## var2
+# a
+# b
+## var3
+# I
+# II
+>, "nested for macros";
 
 done_testing;

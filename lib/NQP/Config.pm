@@ -120,7 +120,8 @@ sub init {
     $config->{lang}   = $lang;
     $config->{lclang} = lc $lang;
 
-    # Num of spaces to indent filelists in a makefile
+    # Num of spaces to indent lists in the Makefile
+    $config->{list_indent} =
     $config->{filelist_indent} = 4;
 
     $self->{backend_prefix} = {
