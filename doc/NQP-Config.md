@@ -553,6 +553,16 @@ Tries to execute `@cmd` with `system` routine. Dies if exit code is not 0.
 
 Intended as a replacement for `qx{command}`. Returns command output or dies if exit code is not 0.
 
+If `%params` has an `output_timeout` key then the routine attempts to use `IPC::Cmd` `run_forked` if available and
+monitors the subcommand for produced output. If none is produced in more that `output_timeout` seconds the process
+gets terminated and `die` is invoked with an explanation. Additional parameters are used then:
+
+* `description` – a description for the command invoked
+* `heartbeat` – report `description` every `hearbeat` seconds to keep the user entertained
+* `verbose` – if true then command output is not hidden; `heartbeat` is ignored then
+
+The rest of `%params` keys are passed through into `run` or `run_forked` as is.
+
 ### `parse_revision($rev)`
 
 Parses standard revisions of `MoarVM`, `NQP`, `Rakudo`.

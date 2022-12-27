@@ -26,7 +26,7 @@ use File::Basename;
 use FindBin;
 use Data::Dumper;
 use NQP::Macros;
-use IPC::Cmd qw<can_run run>;
+use IPC::Cmd qw<can_run run run_forked>;
 use Cwd;
 use Carp;
 use ExtUtils::Command;
@@ -1503,15 +1503,58 @@ sub system_or_die {
       or die "Command failed (status $?): @cmd\n";
 }
 
-# qx{} replacement.
+# qx{} replacement and process timing out protection.
 sub run_or_die {
     my ( $cmd, %params ) = @_;
     my $buf;
-    my $ok = run( command => $cmd, %params, buffer => \$buf );
-    unless ($ok) {
-        my $cmdstr = ref($cmd) eq 'ARRAY' ? join( " ", @$cmd ) : $cmd;
-        die "Command failed (status $?): $cmdstr\n";
-    }
+	my $ok = 1;
+	my $reason;
+	my $cmdstr = ref($cmd) eq 'ARRAY' ? join( " ", @$cmd ) : $cmd;
+	if ($params{output_timeout} && IPC::Cmd->can_use_run_forked) {
+		my $last_out_at = time;
+		my $output_timeout = delete $params{output_timeout};
+		my $verbose = delete $params{verbose};
+		my $heartbeat = delete $params{heartbeat};
+		my $description = delete($params{description}) // '... Command `' . $cmdstr . '`';
+		my sub on_stdout {
+			print join("", @_) if $verbose;
+			$last_out_at = time;
+		}
+		my sub on_stderr {
+			print STDERR join("", @_) if $verbose;
+			$last_out_at = time;
+		}
+		my $started = time;
+		my $last_heartbeat = time;
+		my $resp = run_forked $cmd, 
+					{
+						stdout_handler => \&on_stdout, 
+						stderr_handler => \&on_stderr,
+						wait_loop_callback => sub {
+							my $now = time;
+							if (($now - $last_out_at) >= $output_timeout) {
+								$reason = "no output from `" . $cmdstr . "` in " . $output_timeout . "sec.";
+								$ok = 0;
+								kill 'HUP', $$;
+							}
+							if (!$verbose && $heartbeat && ($now - $last_heartbeat) >= $heartbeat) {
+								$last_heartbeat = $now;
+								say $description, ", ", ($now - $started), "sec.";
+							}
+						},
+						terminate_on_signal => 'HUP',
+						terminate_on_parent_sudden_death => 1,
+						%params
+					};
+		$ok &&= !($resp->{killed_by_signal} || $resp->{exit_code});
+		$buf = $resp->{merged};
+	}
+	else {
+		($ok, $reason) = run( command => $cmd, %params, buffer => \$buf );
+	}
+	unless ($ok) {
+		die "Command failed: $reason\n";
+	}
     return $buf;
 }
 
