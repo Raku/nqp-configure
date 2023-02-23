@@ -1516,20 +1516,20 @@ sub run_or_die {
 		my $verbose = delete $params{verbose};
 		my $heartbeat = delete $params{heartbeat};
 		my $description = delete($params{description}) // '... Command `' . $cmdstr . '`';
-		my sub on_stdout {
+		my $on_stdout = sub {
 			print join("", @_) if $verbose;
 			$last_out_at = time;
-		}
-		my sub on_stderr {
+		};
+		my $on_stderr = sub {
 			print STDERR join("", @_) if $verbose;
 			$last_out_at = time;
-		}
+		};
 		my $started = time;
 		my $last_heartbeat = time;
 		my $resp = run_forked $cmd, 
 					{
-						stdout_handler => \&on_stdout, 
-						stderr_handler => \&on_stderr,
+						stdout_handler => $on_stdout, 
+						stderr_handler => $on_stderr,
 						wait_loop_callback => sub {
 							my $now = time;
 							if (($now - $last_out_at) >= $output_timeout) {
