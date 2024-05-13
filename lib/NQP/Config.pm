@@ -259,7 +259,7 @@ sub make_cmd {
                           . "+, but got "
                           . $actual_version );
                 }
-                if ( $cl_arch ne "x64 ) {
+                if ( $cl_arch ne "x64" ) {
                     $self->sorry( "Rakudo compiles currently only on "
                           . "x64 architectures, but we are on "
                           . $cl_arch );
