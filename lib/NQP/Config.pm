@@ -247,7 +247,7 @@ sub make_cmd {
         my $has_gcc   = 0 == system('gcc --version >NUL 2>&1');
         if ($has_cl) {
             if ( $cl_report =~
-                /Microsoft\s.*\sCompiler\s+Version\s+(\d+(?:\.\d+)+)\s+for\s+(x\d+)/i )
+                /Microsoft\s.*\sCompiler\s+Version\s+(\d+(?:\.\d+)+)\s+for\s+(\D+\d+)/i )
             {
                 my $actual_version = $1;
 		my $cl_arch        = $2;
@@ -259,9 +259,9 @@ sub make_cmd {
                           . "+, but got "
                           . $actual_version );
                 }
-                if ( $cl_arch ne "x64" ) {
-                    $self->sorry( "Rakudo compiles currently only on "
-                          . "x64 architectures, but we are on "
+                if ( $cl_arch !~ m/\D+64$/ ) {
+                    $self->sorry( "On Microsoft Windows, Rakudo compiles currently only on "
+                          . "64bit architectures, but we are on "
                           . $cl_arch );
                 }
             }
