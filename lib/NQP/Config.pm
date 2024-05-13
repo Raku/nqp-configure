@@ -247,15 +247,22 @@ sub make_cmd {
         my $has_gcc   = 0 == system('gcc --version >NUL 2>&1');
         if ($has_cl) {
             if ( $cl_report =~
-                /Microsoft\s.*\sCompiler\s+Version\s+(\d+(?:\.\d+)+)/i )
+                /Microsoft\s.*\sCompiler\s+Version\s+(\d+(?:\.\d+)+)\s+for\s+(x\d+)/i )
             {
                 my $actual_version = $1;
+		my $cl_arch        = $2;
                 my $expect_version = "19.0";
+		
                 if ( version->parse($actual_version) < $expect_version ) {
                     $self->sorry( "Expected Microsoft Compiler version "
                           . $expect_version
                           . "+, but got "
                           . $actual_version );
+                }
+                if ( $cl_arch ne "x64 ) {
+                    $self->sorry( "Rakudo compiles currently only on "
+                          . "x64 architectures, but we are on "
+                          . $cl_arch );
                 }
             }
         }
