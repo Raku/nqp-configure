@@ -1553,7 +1553,7 @@ sub run_or_die {
 		($ok, $reason) = run( command => $cmd, %params, buffer => \$buf );
 	}
 	unless ($ok) {
-		die "Command failed: $reason\n";
+		die "Command failed: " . ($reason || "No reason provided") . "\n";
 	}
     return $buf;
 }
