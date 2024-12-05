@@ -1020,7 +1020,7 @@ sub _m_if {
         # preserving \t in makefiles.
         $text = ( $ws eq ' ' ? '' : $ws ) . $+{text};
         my $matches = 0;
-        if ( $cond =~ /^(?<var>\w(?:\w|:\w)*)(?:(?<op>[=\!]=)(?<val>.*))?$/ ) {
+        if ( $cond =~ /^(?<var>\w(?:\w|:\w|::\w)*)(?:(?<op>[=\!]=)(?<val>.*))?$/ ) {
             if ( $+{op} ) {
                 my $val      = $+{val};
                 my $var      = $+{var};
